@@ -1,0 +1,16 @@
+[Unit]
+Description=Set Kernel Panic and SysRq Settings on Boot
+# 这个服务应该在系统基本就绪后运行
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+# 使用 sh -c 来执行包含重向的命令
+ExecStart=/bin/sh -c 'echo 10 > /proc/sys/kernel/panic'
+ExecStart=/bin/sh -c 'echo 8 > /proc/sysrq-trigger'
+
+
+[Install]
+WantedBy=multi-user.target
+

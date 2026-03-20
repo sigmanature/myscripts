@@ -1,0 +1,38 @@
+Reading data from: results_filt_kernel_vanila_hole_iomap_v1_hole_date_20250809.csv...
+Generating performance report...
+
+========================= REPORT PREVIEW =========================
+
+Subject: Performance Benchmark Summary: iomap_v1 vs. vanilla
+------------------------------------------------------------
+
+Hi all,
+
+This report summarizes the performance benchmarks comparing the `iomap_v1` and `vanila` kernels.
+The data presents the average bandwidth (MiB/s) and IOPS for a 'read' workload, grouped by block size (`bs`).
+
+--- Kernel: iomap_v1_hole ---
+Block Size (bs)      | Avg. Bandwidth (MiB/s)       | Avg. IOPS
+---------------------+------------------------------+---------------------
+100M                 | 1825.60                      | 17.70
+10M                  | 1989.24                      | 198.42
+1G                   | 1312.80                      | 0.90
+1M                   | 2326.02                      | 2325.42
+4k                   | 799.40                       | 204700.00
+
+--- Kernel: vanila_hole ---
+Block Size (bs)      | Avg. Bandwidth (MiB/s)       | Avg. IOPS
+---------------------+------------------------------+---------------------
+100M                 | 708.90                       | 6.50
+10M                  | 735.00                       | 73.10
+128k                 | 786.70                       | 6292.20
+1G                   | 613.20                       | 0.00
+1M                   | 764.50                       | 764.25
+4k                   | 478.80                       | 122400.00
+
+Best regards,
+[Your Name]
+
+====================== END OF REPORT PREVIEW ======================
+
+Report successfully saved to: performance_summary_report.txt

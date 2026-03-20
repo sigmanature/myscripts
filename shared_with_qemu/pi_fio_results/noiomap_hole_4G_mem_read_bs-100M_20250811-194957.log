@@ -1,0 +1,29 @@
+buffered-read: (g=0): rw=read, bs=(R) 100MiB-100MiB, (W) 100MiB-100MiB, (T) 100MiB-100MiB, ioengine=psync, iodepth=1
+fio-3.33
+Starting 1 process
+
+buffered-read: (groupid=0, jobs=1): err= 0: pid=4251: Mon Aug 11 19:49:58 2025
+  read: IOPS=9, BW=966MiB/s (1013MB/s)(1000MiB/1035msec)
+    clat (msec): min=90, max=126, avg=103.42, stdev=10.25
+     lat (msec): min=90, max=126, avg=103.42, stdev=10.25
+    clat percentiles (msec):
+     |  1.00th=[   91],  5.00th=[   91], 10.00th=[   91], 20.00th=[   94],
+     | 30.00th=[   99], 40.00th=[  100], 50.00th=[  101], 60.00th=[  102],
+     | 70.00th=[  105], 80.00th=[  111], 90.00th=[  111], 95.00th=[  127],
+     | 99.00th=[  127], 99.50th=[  127], 99.90th=[  127], 99.95th=[  127],
+     | 99.99th=[  127]
+   bw (  KiB/s): min=819200, max=1024000, per=93.15%, avg=921600.00, stdev=144815.47, samples=2
+   iops        : min=    8, max=   10, avg= 9.00, stdev= 1.41, samples=2
+  lat (msec)   : 100=40.00%, 250=60.00%
+  cpu          : usr=0.00%, sys=99.42%, ctx=59, majf=0, minf=6406
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=10,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+   READ: bw=966MiB/s (1013MB/s), 966MiB/s-966MiB/s (1013MB/s-1013MB/s), io=1000MiB (1049MB), run=1035-1035msec
+
+Disk stats (read/write):
+  nvme0n1: ios=31/0, merge=89/0, ticks=8/0, in_queue=8, util=0.40%

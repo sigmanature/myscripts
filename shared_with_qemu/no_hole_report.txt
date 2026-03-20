@@ -1,0 +1,39 @@
+Reading data from: results_without_writes.csv...
+Generating performance report...
+
+========================= REPORT PREVIEW =========================
+
+Subject: Performance Benchmark Summary: iomap_v1 vs. vanilla
+------------------------------------------------------------
+
+Hi all,
+
+This report summarizes the performance benchmarks comparing the `iomap_v1` and `vanila` kernels.
+The data presents the average bandwidth (MiB/s) and IOPS for a 'read' workload, grouped by block size (`bs`).
+
+--- Kernel: iomap_v1 ---
+Block Size (bs)      | Avg. Bandwidth (MiB/s)       | Avg. IOPS
+---------------------+------------------------------+---------------------
+100M                 | 2809.60                      | 27.50
+10M                  | 3184.60                      | 317.90
+128k                 | 1376.20                      | 11000.80
+1G                   | 1954.70                      | 1.20
+1M                   | 2717.00                      | 2716.70
+4k                   | 616.50                       | 157800.00
+
+--- Kernel: vanila ---
+Block Size (bs)      | Avg. Bandwidth (MiB/s)       | Avg. IOPS
+---------------------+------------------------------+---------------------
+100M                 | 994.60                       | 9.60
+10M                  | 986.50                       | 98.10
+128k                 | 693.80                       | 5550.90
+1G                   | 816.90                       | 0.00
+1M                   | 968.90                       | 968.40
+4k                   | 429.80                       | 109990.00
+
+Best regards,
+[Your Name]
+
+====================== END OF REPORT PREVIEW ======================
+
+Report successfully saved to: performance_summary_report.txt

@@ -1,0 +1,750 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="342" onload="init(evt)" viewBox="0 0 1200 342" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x="' + params.x + '"][y="' + params.y + '"]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add("hide");
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector("rect");
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == "unzoom") clearzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split("=");
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = "?";
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == "&")
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+		if (currentSearchTerm === null) return;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="342.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >Flame Graph</text>
+<text id="details" x="10.00" y="325" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="325" > </text>
+<g id="frames">
+<g >
+<title>__update_cpu_freelist_fast (6,664,167 samples, 0.91%)</title><rect x="1000.0" y="133" width="10.8" height="15.0" fill="rgb(226,98,23)" rx="2" ry="2" />
+<text  x="1003.04" y="143.5" ></text>
+</g>
+<g >
+<title>__rmqueue_pcplist (10,520,105 samples, 1.44%)</title><rect x="339.9" y="37" width="17.0" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="342.93" y="47.5" ></text>
+</g>
+<g >
+<title>__submit_bio (13,708,099 samples, 1.87%)</title><rect x="1063.8" y="149" width="22.1" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="1066.75" y="159.5" >_..</text>
+</g>
+<g >
+<title>blk_mq_flush_plug_list.part.0 (22,931,489 samples, 3.14%)</title><rect x="87.0" y="197" width="37.0" height="15.0" fill="rgb(224,91,21)" rx="2" ry="2" />
+<text  x="90.04" y="207.5" >blk..</text>
+</g>
+<g >
+<title>__get_node_folio (20,101,269 samples, 2.75%)</title><rect x="1130.4" y="165" width="32.4" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="1133.36" y="175.5" >__..</text>
+</g>
+<g >
+<title>_raw_spin_lock (8,658,556 samples, 1.18%)</title><rect x="405.0" y="149" width="13.9" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="407.96" y="159.5" ></text>
+</g>
+<g >
+<title>_raw_spin_trylock (5,339,564 samples, 0.73%)</title><rect x="300.4" y="53" width="8.6" height="15.0" fill="rgb(222,80,19)" rx="2" ry="2" />
+<text  x="303.42" y="63.5" ></text>
+</g>
+<g >
+<title>filemap_add_folio (26,083,659 samples, 3.57%)</title><rect x="15.9" y="261" width="42.1" height="15.0" fill="rgb(207,9,2)" rx="2" ry="2" />
+<text  x="18.93" y="271.5" >fil..</text>
+</g>
+<g >
+<title>__kvmalloc_node_noprof (146,777,359 samples, 20.07%)</title><rect x="626.8" y="133" width="236.8" height="15.0" fill="rgb(233,129,30)" rx="2" ry="2" />
+<text  x="629.83" y="143.5" >__kvmalloc_node_noprof</text>
+</g>
+<g >
+<title>vm_map_ram (95,105,381 samples, 13.00%)</title><rect x="452.0" y="149" width="153.5" height="15.0" fill="rgb(248,199,47)" rx="2" ry="2" />
+<text  x="455.03" y="159.5" >vm_map_ram</text>
+</g>
+<g >
+<title>read_pages (684,819,729 samples, 93.63%)</title><rect x="84.7" y="261" width="1104.8" height="15.0" fill="rgb(227,103,24)" rx="2" ry="2" />
+<text  x="87.68" y="271.5" >read_pages</text>
+</g>
+<g >
+<title>mempool_alloc_pages (61,537,677 samples, 8.41%)</title><rect x="270.5" y="133" width="99.3" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="273.52" y="143.5" >mempool_allo..</text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (7,619,996 samples, 1.04%)</title><rect x="89.4" y="165" width="12.3" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="92.38" y="175.5" ></text>
+</g>
+<g >
+<title>submit_bio (18,162,176 samples, 2.48%)</title><rect x="1062.1" y="197" width="29.3" height="15.0" fill="rgb(207,13,3)" rx="2" ry="2" />
+<text  x="1065.09" y="207.5" >su..</text>
+</g>
+<g >
+<title>__set_ptes.constprop.0 (6,848,281 samples, 0.94%)</title><rect x="498.1" y="133" width="11.1" height="15.0" fill="rgb(245,185,44)" rx="2" ry="2" />
+<text  x="501.11" y="143.5" ></text>
+</g>
+<g >
+<title>virtblk_prep_rq.isra.0 (9,171,574 samples, 1.25%)</title><rect x="109.2" y="165" width="14.8" height="15.0" fill="rgb(247,193,46)" rx="2" ry="2" />
+<text  x="112.24" y="175.5" ></text>
+</g>
+<g >
+<title>alloc_frozen_pages_noprof (60,285,222 samples, 8.24%)</title><rect x="272.5" y="101" width="97.3" height="15.0" fill="rgb(206,5,1)" rx="2" ry="2" />
+<text  x="275.54" y="111.5" >alloc_froze..</text>
+</g>
+<g >
+<title>alloc_frozen_pages_noprof (12,803,929 samples, 1.75%)</title><rect x="61.2" y="229" width="20.6" height="15.0" fill="rgb(206,5,1)" rx="2" ry="2" />
+<text  x="64.17" y="239.5" ></text>
+</g>
+<g >
+<title>__filemap_get_folio (7,614,949 samples, 1.04%)</title><rect x="1134.6" y="133" width="12.3" height="15.0" fill="rgb(231,120,28)" rx="2" ry="2" />
+<text  x="1137.64" y="143.5" ></text>
+</g>
+<g >
+<title>iomap_adjust_read_range (6,022,936 samples, 0.82%)</title><rect x="1097.8" y="213" width="9.7" height="15.0" fill="rgb(214,44,10)" rx="2" ry="2" />
+<text  x="1100.77" y="223.5" ></text>
+</g>
+<g >
+<title>f2fs_ra_node_pages (5,766,096 samples, 0.79%)</title><rect x="1148.9" y="133" width="9.4" height="15.0" fill="rgb(238,155,37)" rx="2" ry="2" />
+<text  x="1151.95" y="143.5" ></text>
+</g>
+<g >
+<title>blk_finish_plug (23,682,846 samples, 3.24%)</title><rect x="86.1" y="245" width="38.2" height="15.0" fill="rgb(231,119,28)" rx="2" ry="2" />
+<text  x="89.11" y="255.5" >blk..</text>
+</g>
+<g >
+<title>iomap_iter (46,747,663 samples, 6.39%)</title><rect x="1107.5" y="213" width="75.4" height="15.0" fill="rgb(233,132,31)" rx="2" ry="2" />
+<text  x="1110.49" y="223.5" >iomap_iter</text>
+</g>
+<g >
+<title>__pi_memset_generic (10,816,931 samples, 1.48%)</title><rect x="239.0" y="165" width="17.5" height="15.0" fill="rgb(216,52,12)" rx="2" ry="2" />
+<text  x="242.00" y="175.5" ></text>
+</g>
+<g >
+<title>submit_bio_noacct_nocheck (17,441,599 samples, 2.38%)</title><rect x="1063.3" y="165" width="28.1" height="15.0" fill="rgb(225,95,22)" rx="2" ry="2" />
+<text  x="1066.25" y="175.5" >s..</text>
+</g>
+<g >
+<title>__folio_batch_add_and_move (5,214,479 samples, 0.71%)</title><rect x="48.1" y="229" width="8.4" height="15.0" fill="rgb(254,227,54)" rx="2" ry="2" />
+<text  x="51.09" y="239.5" ></text>
+</g>
+<g >
+<title>zstd_init_dstream (34,665,539 samples, 4.74%)</title><rect x="866.0" y="133" width="55.9" height="15.0" fill="rgb(235,140,33)" rx="2" ry="2" />
+<text  x="868.97" y="143.5" >zstd_..</text>
+</g>
+<g >
+<title>f2fs_read_multi_folios (539,736,913 samples, 73.79%)</title><rect x="169.2" y="197" width="870.7" height="15.0" fill="rgb(230,116,27)" rx="2" ry="2" />
+<text  x="172.16" y="207.5" >f2fs_read_multi_folios</text>
+</g>
+<g >
+<title>___kmalloc_large_node (140,227,552 samples, 19.17%)</title><rect x="633.4" y="117" width="226.3" height="15.0" fill="rgb(216,53,12)" rx="2" ry="2" />
+<text  x="636.44" y="127.5" >___kmalloc_large_node</text>
+</g>
+<g >
+<title>f2fs_grab_read_bio.constprop.0 (6,775,585 samples, 0.93%)</title><rect x="1016.8" y="181" width="10.9" height="15.0" fill="rgb(223,83,19)" rx="2" ry="2" />
+<text  x="1019.80" y="191.5" ></text>
+</g>
+<g >
+<title>blk_mq_flush_plug_list (23,101,434 samples, 3.16%)</title><rect x="87.0" y="213" width="37.3" height="15.0" fill="rgb(215,46,11)" rx="2" ry="2" />
+<text  x="90.04" y="223.5" >blk..</text>
+</g>
+<g >
+<title>vmap_small_pages_range_noflush (5,777,610 samples, 0.79%)</title><rect x="605.5" y="149" width="9.3" height="15.0" fill="rgb(216,52,12)" rx="2" ry="2" />
+<text  x="608.46" y="159.5" ></text>
+</g>
+<g >
+<title>bio_add_folio (11,298,943 samples, 1.54%)</title><rect x="198.1" y="181" width="18.2" height="15.0" fill="rgb(220,69,16)" rx="2" ry="2" />
+<text  x="201.08" y="191.5" ></text>
+</g>
+<g >
+<title>all (731,437,190 samples, 100%)</title><rect x="10.0" y="293" width="1180.0" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="13.00" y="303.5" ></text>
+</g>
+<g >
+<title>__alloc_frozen_pages_noprof (110,734,203 samples, 15.14%)</title><rect x="678.0" y="85" width="178.6" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="680.98" y="95.5" >__alloc_frozen_pages_no..</text>
+</g>
+<g >
+<title>__get_node_folio.part.0 (18,975,849 samples, 2.59%)</title><rect x="1131.9" y="149" width="30.7" height="15.0" fill="rgb(206,6,1)" rx="2" ry="2" />
+<text  x="1134.94" y="159.5" >__..</text>
+</g>
+<g >
+<title>f2fs_submit_read_bio (18,162,176 samples, 2.48%)</title><rect x="1062.1" y="213" width="29.3" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="1065.09" y="223.5" >f2..</text>
+</g>
+<g >
+<title>f2fs_compress_iomap_readahead (656,417,386 samples, 89.74%)</title><rect x="125.4" y="229" width="1058.9" height="15.0" fill="rgb(245,185,44)" rx="2" ry="2" />
+<text  x="128.38" y="239.5" >f2fs_compress_iomap_readahead</text>
+</g>
+<g >
+<title>kmem_cache_alloc_noprof (10,972,807 samples, 1.50%)</title><rect x="434.1" y="133" width="17.7" height="15.0" fill="rgb(248,200,47)" rx="2" ry="2" />
+<text  x="437.05" y="143.5" ></text>
+</g>
+<g >
+<title>f2fs_get_dnode_of_data (23,728,573 samples, 3.24%)</title><rect x="1124.5" y="181" width="38.3" height="15.0" fill="rgb(211,29,6)" rx="2" ry="2" />
+<text  x="1127.51" y="191.5" >f2f..</text>
+</g>
+<g >
+<title>_raw_spin_unlock_irq (11,158,984 samples, 1.53%)</title><rect x="30.1" y="245" width="18.0" height="15.0" fill="rgb(215,47,11)" rx="2" ry="2" />
+<text  x="33.09" y="255.5" ></text>
+</g>
+<g >
+<title>__alloc_frozen_pages_noprof (11,715,485 samples, 1.60%)</title><rect x="62.9" y="197" width="18.9" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="65.93" y="207.5" ></text>
+</g>
+<g >
+<title>folio_add_lru (5,214,479 samples, 0.71%)</title><rect x="48.1" y="245" width="8.4" height="15.0" fill="rgb(208,17,4)" rx="2" ry="2" />
+<text  x="51.09" y="255.5" ></text>
+</g>
+<g >
+<title>get_page_from_freelist (20,653,311 samples, 2.82%)</title><rect x="786.1" y="69" width="33.3" height="15.0" fill="rgb(252,218,52)" rx="2" ry="2" />
+<text  x="789.08" y="79.5" >ge..</text>
+</g>
+<g >
+<title>prep_compound_page (20,948,912 samples, 2.86%)</title><rect x="819.4" y="69" width="33.8" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="822.39" y="79.5" >pr..</text>
+</g>
+<g >
+<title>get_page_from_freelist (31,863,585 samples, 4.36%)</title><rect x="312.7" y="53" width="51.4" height="15.0" fill="rgb(252,218,52)" rx="2" ry="2" />
+<text  x="315.66" y="63.5" >get_p..</text>
+</g>
+<g >
+<title>f2fs_iomap_readahead (659,750,516 samples, 90.20%)</title><rect x="124.6" y="245" width="1064.4" height="15.0" fill="rgb(217,59,14)" rx="2" ry="2" />
+<text  x="127.62" y="255.5" >f2fs_iomap_readahead</text>
+</g>
+<g >
+<title>bio_add_page (9,357,932 samples, 1.28%)</title><rect x="201.2" y="165" width="15.1" height="15.0" fill="rgb(221,74,17)" rx="2" ry="2" />
+<text  x="204.21" y="175.5" ></text>
+</g>
+<g >
+<title>alloc_pages_mpol (12,473,572 samples, 1.71%)</title><rect x="61.7" y="213" width="20.1" height="15.0" fill="rgb(254,227,54)" rx="2" ry="2" />
+<text  x="64.71" y="223.5" ></text>
+</g>
+<g >
+<title>alloc_pages_mpol (54,443,143 samples, 7.44%)</title><rect x="282.0" y="85" width="87.8" height="15.0" fill="rgb(254,227,54)" rx="2" ry="2" />
+<text  x="284.97" y="95.5" >alloc_page..</text>
+</g>
+<g >
+<title>f2fs_ra_node_page (5,310,332 samples, 0.73%)</title><rect x="1149.7" y="117" width="8.6" height="15.0" fill="rgb(231,122,29)" rx="2" ry="2" />
+<text  x="1152.68" y="127.5" ></text>
+</g>
+<g >
+<title>virtio_queue_rqs (22,024,800 samples, 3.01%)</title><rect x="88.5" y="181" width="35.5" height="15.0" fill="rgb(208,17,4)" rx="2" ry="2" />
+<text  x="91.51" y="191.5" >vir..</text>
+</g>
+<g >
+<title>__alloc_pages_noprof (112,357,967 samples, 15.36%)</title><rect x="677.2" y="101" width="181.2" height="15.0" fill="rgb(205,4,1)" rx="2" ry="2" />
+<text  x="680.17" y="111.5" >__alloc_pages_noprof</text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (5,763,158 samples, 0.79%)</title><rect x="63.6" y="181" width="9.3" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="66.57" y="191.5" ></text>
+</g>
+<g >
+<title>__blk_flush_plug (23,491,211 samples, 3.21%)</title><rect x="86.4" y="229" width="37.9" height="15.0" fill="rgb(217,57,13)" rx="2" ry="2" />
+<text  x="89.42" y="239.5" >__b..</text>
+</g>
+<g >
+<title>f2fs_alloc_dic (495,253,501 samples, 67.71%)</title><rect x="217.2" y="181" width="799.0" height="15.0" fill="rgb(210,23,5)" rx="2" ry="2" />
+<text  x="220.24" y="191.5" >f2fs_alloc_dic</text>
+</g>
+<g >
+<title>__slab_alloc.constprop.0 (11,250,916 samples, 1.54%)</title><rect x="936.8" y="149" width="18.2" height="15.0" fill="rgb(229,112,26)" rx="2" ry="2" />
+<text  x="939.83" y="159.5" ></text>
+</g>
+<g >
+<title>kmem_cache_alloc_noprof (19,019,322 samples, 2.60%)</title><rect x="980.5" y="149" width="30.7" height="15.0" fill="rgb(248,200,47)" rx="2" ry="2" />
+<text  x="983.54" y="159.5" >km..</text>
+</g>
+<g >
+<title>f2fs_do_read_multi_folios (556,950,065 samples, 76.14%)</title><rect x="145.0" y="213" width="898.5" height="15.0" fill="rgb(253,223,53)" rx="2" ry="2" />
+<text  x="148.02" y="223.5" >f2fs_do_read_multi_folios</text>
+</g>
+<g >
+<title>submit_bio_noacct (17,621,950 samples, 2.41%)</title><rect x="1063.0" y="181" width="28.4" height="15.0" fill="rgb(211,30,7)" rx="2" ry="2" />
+<text  x="1065.96" y="191.5" >su..</text>
+</g>
+<g >
+<title>__alloc_frozen_pages_noprof (50,151,560 samples, 6.86%)</title><rect x="286.6" y="69" width="80.9" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="289.60" y="79.5" >__alloc_f..</text>
+</g>
+<g >
+<title>blk_mq_submit_bio (11,821,072 samples, 1.62%)</title><rect x="1066.8" y="133" width="19.1" height="15.0" fill="rgb(224,89,21)" rx="2" ry="2" />
+<text  x="1069.80" y="143.5" ></text>
+</g>
+<g >
+<title>folio_alloc_noprof (13,895,428 samples, 1.90%)</title><rect x="59.4" y="245" width="22.4" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="62.41" y="255.5" >f..</text>
+</g>
+<g >
+<title>f2fs_ifs_alloc (5,096,562 samples, 0.70%)</title><rect x="1043.5" y="213" width="8.2" height="15.0" fill="rgb(243,178,42)" rx="2" ry="2" />
+<text  x="1046.52" y="223.5" ></text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (57,522,949 samples, 7.86%)</title><rect x="693.3" y="69" width="92.8" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="696.28" y="79.5" >_raw_spin_u..</text>
+</g>
+<g >
+<title>page_array_alloc.isra.0 (28,203,399 samples, 3.86%)</title><rect x="966.6" y="165" width="45.5" height="15.0" fill="rgb(243,176,42)" rx="2" ry="2" />
+<text  x="969.63" y="175.5" >page..</text>
+</g>
+<g >
+<title>f2fs_prepare_decomp_mem (338,240,649 samples, 46.24%)</title><rect x="376.5" y="165" width="545.7" height="15.0" fill="rgb(244,179,42)" rx="2" ry="2" />
+<text  x="379.54" y="175.5" >f2fs_prepare_decomp_mem</text>
+</g>
+<g >
+<title>filemap_alloc_folio_noprof (14,762,778 samples, 2.02%)</title><rect x="58.0" y="261" width="23.8" height="15.0" fill="rgb(219,68,16)" rx="2" ry="2" />
+<text  x="61.01" y="271.5" >f..</text>
+</g>
+<g >
+<title>kmem_cache_alloc_noprof (24,498,651 samples, 3.35%)</title><rect x="922.2" y="165" width="39.5" height="15.0" fill="rgb(248,200,47)" rx="2" ry="2" />
+<text  x="925.21" y="175.5" >kme..</text>
+</g>
+<g >
+<title>page_cache_ra_order (731,437,190 samples, 100.00%)</title><rect x="10.0" y="277" width="1180.0" height="15.0" fill="rgb(223,83,20)" rx="2" ry="2" />
+<text  x="13.00" y="287.5" >page_cache_ra_order</text>
+</g>
+<g >
+<title>zstd_init_decompress_ctx (189,576,915 samples, 25.92%)</title><rect x="616.1" y="149" width="305.8" height="15.0" fill="rgb(208,15,3)" rx="2" ry="2" />
+<text  x="619.06" y="159.5" >zstd_init_decompress_ctx</text>
+</g>
+<g >
+<title>page_array_alloc.isra.0 (15,011,464 samples, 2.05%)</title><rect x="427.8" y="149" width="24.2" height="15.0" fill="rgb(243,176,42)" rx="2" ry="2" />
+<text  x="430.81" y="159.5" >p..</text>
+</g>
+<g >
+<title>__mem_cgroup_charge (7,331,467 samples, 1.00%)</title><rect x="18.3" y="245" width="11.8" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="21.26" y="255.5" ></text>
+</g>
+<g >
+<title>f2fs_buffered_read_compress_iomap_begin (40,508,750 samples, 5.54%)</title><rect x="1110.1" y="197" width="65.4" height="15.0" fill="rgb(207,12,2)" rx="2" ry="2" />
+<text  x="1113.12" y="207.5" >f2fs_bu..</text>
+</g>
+<g >
+<title>mempool_alloc_noprof (64,254,520 samples, 8.78%)</title><rect x="266.1" y="149" width="103.7" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="269.14" y="159.5" >mempool_allo..</text>
+</g>
+<g >
+<title>___slab_alloc (7,072,694 samples, 0.97%)</title><rect x="937.1" y="133" width="11.4" height="15.0" fill="rgb(230,115,27)" rx="2" ry="2" />
+<text  x="940.08" y="143.5" ></text>
+</g>
+<g >
+<title>vmap_small_pages_range_noflush (51,578,820 samples, 7.05%)</title><rect x="522.0" y="133" width="83.2" height="15.0" fill="rgb(216,52,12)" rx="2" ry="2" />
+<text  x="524.96" y="143.5" >vmap_smal..</text>
+</g>
+<g >
+<title>f2fs_compress_alloc_page (70,860,431 samples, 9.69%)</title><rect x="262.2" y="165" width="114.3" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="265.22" y="175.5" >f2fs_compress_..</text>
+</g>
+<g >
+<title>alloc_pages_noprof (60,285,222 samples, 8.24%)</title><rect x="272.5" y="117" width="97.3" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="275.54" y="127.5" >alloc_pages..</text>
+</g>
+</g>
+</svg>

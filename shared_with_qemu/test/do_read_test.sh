@@ -1,0 +1,1 @@
+bash ./read_test.sh 0 512k

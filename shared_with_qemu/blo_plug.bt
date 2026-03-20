@@ -1,0 +1,31 @@
+#include "type.h"
+/*
+ * bio_plug_tp.bt  --  tracepoint 版本，不依赖 kprobe
+ */
+tracepoint:block:block_bio_queue
+{
+    @bytes += args->bytes;
+    @cnt   += 1;
+}
+
+tracepoint:block:block_plug
+{
+    @ts[tid] = nsecs;
+}
+
+tracepoint:block:block_unplug / @ts[tid] /
+{
+    @lat = hist((nsecs - @ts[tid]) / 1000);   // μs
+    delete(@ts[tid]);
+}
+
+END
+{
+    printf("\n=== bio / plug 统计 ===\n");
+    printf("total bios   : %d\n", @cnt);
+    printf("total bytes  : %d\n", @bytes);
+    printf("average bio  : %d B\n\n", @bytes / @cnt);
+
+    printf("--- plug latency (µs) ---\n");
+    print(@lat);
+}

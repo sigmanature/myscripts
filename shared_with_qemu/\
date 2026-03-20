@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+import pandas as pd
+
+# --- Configuration ---
+# Input CSV file. This should be the data you want to analyze.
+# Using the file after filtering out 'write' modes is recommended.
+INPUT_FILENAME = 'results_without_writes.csv' 
+# The name of the output text file for the report.
+OUTPUT_FILENAME = 'performance_summary_report.txt'
+# --- End of Configuration ---
+
+def generate_performance_report(df):
+    """
+    Analyzes the performance data and generates a formatted plain-text report in English.
+    """
+    
+    # 1. Group by 'kernel' and 'bs', then calculate the mean for 'bw_mib_s' and 'iops'.
+    # .reset_index() converts the grouped-by columns back into regular columns.
+    try:
+        summary = df.groupby(['kernel', 'bs'])[['bw_mib_s', 'iops']].mean().reset_index()
+    except KeyError as e:
+        # Provide a specific error if a required column is missing.
+        print(f"Error: A required column {e} was not found in the CSV file.")
+        print("Please ensure the CSV header contains 'kernel', 'bs', 'bw_mib_s', and 'iops'.")
+        return None
+
+    # 2. Build the report string.
+    report_lines = []
+    report_lines.append("Subject: Performance Benchmark Summary: iomap_v1 vs. vanilla")
+    report_lines.append("-" * 60)
+    
+    report_lines.append("\nHi all,")
+    report_lines.append("\nThis report summarizes the performance benchmarks comparing the `iomap_v1` and `vanila` kernels.")
+    report_lines.append("The data presents the average bandwidth (MiB/s) and IOPS for a 'read' workload, grouped by block size (`bs`).\n")
+
+    # Iterate through each unique kernel to create a separate table for each.
+    for kernel_name in sorted(summary['kernel'].unique()):
+        report_lines.append(f"--- Kernel: {kernel_name} ---")
+        
+        # Define table headers and separator with appropriate padding for alignment.
+        header = f"{'Block Size (bs)':<20} | {'Avg. Bandwidth (MiB/s)':<28} | {'Avg. IOPS'}"
+        separator = f"{'-'*20}-+-{'-'*28}-+-{'-'*20}"
+        report_lines.append(header)
+        report_lines.append(separator)
+
+        # Filter data for the current kernel.
+        kernel_data = summary[summary['kernel'] == kernel_name].sort_values(by='bs')
+
+        # Populate the table with data.
+        for _, row in kernel_data.iterrows():
+            # Format each row to align with the headers.
+            # :<20 means left-aligned with a width of 20 characters.
+            # :<28.2f means left-aligned, width 28, with 2 decimal places for the float.
+            line = f"{row['bs']:<20} | {row['bw_mib_s']:<28.2f} | {row['iops']:.2f}"
+            report_lines.append(line)
+        
+        report_lines.append("")  # Add a blank line for readability between sections.
+
+    report_lines.append("Best regards,")
+    report_lines.append("[Your Name]") # You can replace this with your actual name.
+
+    # Join all lines into a single string.
+    return "\n".join(report_lines)
+
+# --- Main execution block ---
+if __name__ == "__main__":
+    try:
+        print(f"Reading data from: {INPUT_FILENAME}...")
+        # Load the CSV data into a pandas DataFrame.
+        dataframe = pd.read_csv(INPUT_FILENAME)
+
+        print("Generating performance report...")
+        # Generate the report text by calling the function.
+        report = generate_performance_report(dataframe)
+
+        if report:
+            # Print the report to the console.
+            print("\n" + "="*25 + " REPORT PREVIEW " + "="*25 + "\n")
+            print(report)
+            print("\n" + "="*22 + " END OF REPORT PREVIEW " + "="*22 + "\n")
+
+            # Save the report to a text file.
+            with open(OUTPUT_FILENAME, 'w', encoding='utf-8') as f:
+                f.write(report)
+            
+            print(f"Report successfully saved to: {OUTPUT_FILENAME}")
+
+    except FileNotFoundError:
+        print(f"Error: The file '{INPUT_FILENAME}' was not found.")
+        print("Please make sure the script and the CSV file are in the same directory.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+

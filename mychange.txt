@@ -1,0 +1,24 @@
++static inline u8 f2fs_get_version_of_nid(struct f2fs_sb_info *sbi, nid_t nid)
++{
++        struct node_info ni;
++        if (unlikely(f2fs_get_node_info(sbi, nid, &ni, false)))
++                return 0;              /* 错误时给 0，也跟原来一致 */
++        return ni.version;
++}
+
+if (zoned_gc) {
+		#ifdef CONFIG_BLK_DEV_ZONED
+		if (sbi->bggc_block_io == READ_IO_PRIOR && is_inflight_read_io(sbi))
+			return false;
+		if (sbi->bggc_block_io == ALL_IO_PRIOR && is_inflight_io(sbi, type))
+			return false;
+		#else
+		if (is_inflight_read_io(sbi))
+			return false;
+		#endif
+f2fs.h
+#define stat_inc_block_count(sbi, curseg)				\
+		stat_inc_block_count_multi(sbi, curseg,1)
+#define stat_inc_block_count_multi(sbi, curseg,cnt)				\
+		((sbi)->block_count[(curseg)->alloc_type]+=(cnt))
+extern const struct iomap_writeback_ops f2fs_writeback_ops;

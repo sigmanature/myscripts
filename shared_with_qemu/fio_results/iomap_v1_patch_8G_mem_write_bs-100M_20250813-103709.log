@@ -1,0 +1,35 @@
+buffered-write: (g=0): rw=write, bs=(R) 100MiB-100MiB, (W) 100MiB-100MiB, (T) 100MiB-100MiB, ioengine=psync, iodepth=1
+fio-3.36
+Starting 1 process
+
+buffered-write: (groupid=0, jobs=1): err= 0: pid=533: Wed Aug 13 10:37:10 2025
+  write: IOPS=22, BW=2277MiB/s (2388MB/s)(1100MiB/483msec); 0 zone resets
+    clat (usec): min=26860, max=34380, avg=31229.87, stdev=2992.38
+     lat (usec): min=33552, max=43993, avg=38964.72, stdev=4010.36
+    clat percentiles (usec):
+     |  1.00th=[26870],  5.00th=[26870], 10.00th=[27132], 20.00th=[27657],
+     | 30.00th=[29230], 40.00th=[30540], 50.00th=[32900], 60.00th=[33817],
+     | 70.00th=[33817], 80.00th=[33817], 90.00th=[33817], 95.00th=[34341],
+     | 99.00th=[34341], 99.50th=[34341], 99.90th=[34341], 99.95th=[34341],
+     | 99.99th=[34341]
+  lat (msec)   : 50=100.00%
+  fsync/fdatasync/sync_file_range:
+    sync (usec): min=4015, max=4959, avg=4335.58, stdev=349.17
+    sync percentiles (usec):
+     |  1.00th=[ 4015],  5.00th=[ 4015], 10.00th=[ 4015], 20.00th=[ 4080],
+     | 30.00th=[ 4080], 40.00th=[ 4113], 50.00th=[ 4146], 60.00th=[ 4178],
+     | 70.00th=[ 4293], 80.00th=[ 4621], 90.00th=[ 4883], 95.00th=[ 4948],
+     | 99.00th=[ 4948], 99.50th=[ 4948], 99.90th=[ 4948], 99.95th=[ 4948],
+     | 99.99th=[ 4948]
+  cpu          : usr=17.43%, sys=74.07%, ctx=29, majf=0, minf=13
+  IO depths    : 1=190.9%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=0,11,0,10 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+  WRITE: bw=2277MiB/s (2388MB/s), 2277MiB/s-2277MiB/s (2388MB/s-2388MB/s), io=1100MiB (1153MB), run=483-483msec
+
+Disk stats (read/write):
+  vdc: ios=0/370, sectors=0/2904, merge=0/0, ticks=0/407, in_queue=423, util=4.98%

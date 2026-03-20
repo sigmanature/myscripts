@@ -1,0 +1,40 @@
+buffered-write: (g=0): rw=write, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+fio-3.36
+Starting 1 process
+
+fio: terminating on signal 2
+
+buffered-write: (groupid=0, jobs=1): err= 0: pid=484: Wed Aug 13 10:36:42 2025
+  write: IOPS=363, BW=1455KiB/s (1490kB/s)(17.2MiB/12098msec); 0 zone resets
+    clat (usec): min=29, max=2631, avg=44.41, stdev=42.92
+     lat (usec): min=29, max=2774, avg=45.47, stdev=45.01
+    clat percentiles (usec):
+     |  1.00th=[   32],  5.00th=[   34], 10.00th=[   35], 20.00th=[   36],
+     | 30.00th=[   37], 40.00th=[   38], 50.00th=[   40], 60.00th=[   44],
+     | 70.00th=[   46], 80.00th=[   48], 90.00th=[   52], 95.00th=[   63],
+     | 99.00th=[  124], 99.50th=[  161], 99.90th=[  260], 99.95th=[  273],
+     | 99.99th=[ 2638]
+   bw (  KiB/s): min= 1056, max= 1764, per=100.00%, avg=1456.42, stdev=218.27, samples=24
+   iops        : min=  264, max=  441, avg=364.08, stdev=54.58, samples=24
+  lat (usec)   : 50=87.59%, 100=10.63%, 250=1.66%, 500=0.09%
+  lat (msec)   : 4=0.02%
+  fsync/fdatasync/sync_file_range:
+    sync (usec): min=1938, max=7673, avg=2688.02, stdev=869.34
+    sync percentiles (usec):
+     |  1.00th=[ 2008],  5.00th=[ 2073], 10.00th=[ 2147], 20.00th=[ 2212],
+     | 30.00th=[ 2278], 40.00th=[ 2343], 50.00th=[ 2409], 60.00th=[ 2507],
+     | 70.00th=[ 2606], 80.00th=[ 2737], 90.00th=[ 3359], 95.00th=[ 5211],
+     | 99.00th=[ 5866], 99.50th=[ 6128], 99.90th=[ 6521], 99.95th=[ 7111],
+     | 99.99th=[ 7701]
+  cpu          : usr=0.40%, sys=2.71%, ctx=13378, majf=0, minf=14
+  IO depths    : 1=200.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=0,4401,0,4401 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+  WRITE: bw=1455KiB/s (1490kB/s), 1455KiB/s-1455KiB/s (1490kB/s-1490kB/s), io=17.2MiB (18.0MB), run=12098-12098msec
+
+Disk stats (read/write):
+  vdc: ios=0/11360, sectors=0/56352, merge=0/0, ticks=0/12192, in_queue=21977, util=88.17%

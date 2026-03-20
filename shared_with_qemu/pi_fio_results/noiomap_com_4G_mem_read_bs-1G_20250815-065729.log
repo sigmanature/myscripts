@@ -1,0 +1,7 @@
+buffered-read: (g=0): rw=read, bs=(R) 1024MiB-1024MiB, (W) 1024MiB-1024MiB, (T) 1024MiB-1024MiB, ioengine=psync, iodepth=1
+fio-3.33
+Starting 1 process
+fio: blocksize is larger than data set range
+
+
+Run status group 0 (all jobs):

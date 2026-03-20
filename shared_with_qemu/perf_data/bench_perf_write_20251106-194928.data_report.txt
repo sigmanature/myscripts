@@ -1,0 +1,2785 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 174  of event 'cycles:P'
+# Event count (approx.): 1183644496
+#
+# Children      Self  Command     Shared Object          Symbol                             
+# ........  ........  ..........  .....................  ...................................
+#
+    95.99%     0.00%  dd          dd                     [.] 0x0000aaaad9ee3a2f
+            |
+            ---0xaaaad9ee3a2f
+               __libc_start_main
+               0xffffb34584c3
+               |          
+               |--54.28%--0xaaaad9ee2d57
+               |          0xaaaad9eea68f
+               |          read
+               |          el0t_64_sync
+               |          el0t_64_sync_handler
+               |          el0_svc
+               |          do_el0_svc
+               |          el0_svc_common.constprop.0
+               |          invoke_syscall
+               |          __arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--0xaaaad9ee2e6f
+                          0xaaaad9eeaed7
+                          write
+                          el0t_64_sync
+                          el0t_64_sync_handler
+                          el0_svc
+                          do_el0_svc
+                          el0_svc_common.constprop.0
+                          invoke_syscall
+                          __arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    95.99%     0.00%  dd          libc.so.6              [.] __libc_start_main
+            |
+            ---__libc_start_main
+               0xffffb34584c3
+               |          
+               |--54.28%--0xaaaad9ee2d57
+               |          0xaaaad9eea68f
+               |          read
+               |          el0t_64_sync
+               |          el0t_64_sync_handler
+               |          el0_svc
+               |          do_el0_svc
+               |          el0_svc_common.constprop.0
+               |          invoke_syscall
+               |          __arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--0xaaaad9ee2e6f
+                          0xaaaad9eeaed7
+                          write
+                          el0t_64_sync
+                          el0t_64_sync_handler
+                          el0_svc
+                          do_el0_svc
+                          el0_svc_common.constprop.0
+                          invoke_syscall
+                          __arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    95.99%     0.00%  dd          libc.so.6              [.] 0x0000ffffb34584c3
+            |
+            ---0xffffb34584c3
+               |          
+               |--54.28%--0xaaaad9ee2d57
+               |          0xaaaad9eea68f
+               |          read
+               |          el0t_64_sync
+               |          el0t_64_sync_handler
+               |          el0_svc
+               |          do_el0_svc
+               |          el0_svc_common.constprop.0
+               |          invoke_syscall
+               |          __arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--0xaaaad9ee2e6f
+                          0xaaaad9eeaed7
+                          write
+                          el0t_64_sync
+                          el0t_64_sync_handler
+                          el0_svc
+                          do_el0_svc
+                          el0_svc_common.constprop.0
+                          invoke_syscall
+                          __arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    95.99%     0.00%  dd          [kernel.kallsyms]      [k] el0t_64_sync
+            |
+            ---el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               |          
+               |--54.28%--__arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--__arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    95.99%     0.00%  dd          [kernel.kallsyms]      [k] el0t_64_sync_handler
+            |
+            ---el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               |          
+               |--54.28%--__arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--__arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    95.99%     0.00%  dd          [kernel.kallsyms]      [k] el0_svc
+            |
+            ---el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               |          
+               |--54.28%--__arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--__arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    95.99%     0.00%  dd          [kernel.kallsyms]      [k] do_el0_svc
+            |
+            ---do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               |          
+               |--54.28%--__arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--__arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    95.99%     0.00%  dd          [kernel.kallsyms]      [k] el0_svc_common.constprop.0
+            |
+            ---el0_svc_common.constprop.0
+               invoke_syscall
+               |          
+               |--54.28%--__arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--__arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    95.99%     0.00%  dd          [kernel.kallsyms]      [k] invoke_syscall
+            |
+            ---invoke_syscall
+               |          
+               |--54.28%--__arm64_sys_read
+               |          ksys_read
+               |          vfs_read
+               |          __arch_clear_user
+               |          |          
+               |           --29.51%--el1h_64_sync
+               |                     el1h_64_sync_handler
+               |                     el1_abort
+               |                     |          
+               |                      --28.20%--do_mem_abort
+               |                                do_translation_fault
+               |                                do_page_fault
+               |                                handle_mm_fault
+               |                                __handle_mm_fault
+               |                                |          
+               |                                |--27.35%--do_huge_pmd_anonymous_page
+               |                                |          |          
+               |                                |          |--26.50%--vma_alloc_anon_folio_pmd
+               |                                |          |          |          
+               |                                |          |          |--24.80%--__pi_clear_page
+               |                                |          |          |          
+               |                                |          |           --1.71%--folio_zero_user
+               |                                |          |          
+               |                                |           --0.85%--alloc_pages_noprof
+               |                                |                     alloc_frozen_pages_noprof
+               |                                |                     alloc_pages_mpol
+               |                                |                     __alloc_frozen_pages_noprof
+               |                                |                     __pi_clear_page
+               |                                |          
+               |                                 --0.85%--folio_add_lru_vma
+               |                                           __folio_batch_add_and_move
+               |                                           folio_batch_move_lru
+               |                                           folio_lruvec_lock_irqsave
+               |          
+                --41.71%--__arm64_sys_write
+                          ksys_write
+                          vfs_write
+                          f2fs_file_write_iter
+                          |          
+                          |--35.78%--f2fs_buffered_write_iter
+                          |          iomap_file_buffered_write
+                          |          |          
+                          |          |--34.89%--iomap_write_iter
+                          |          |          |          
+                          |          |          |--25.28%--copy_folio_from_iter_atomic
+                          |          |          |          __arch_copy_from_user
+                          |          |          |          
+                          |          |          |--8.77%--fault_in_readable
+                          |          |          |          
+                          |          |           --0.84%--iomap_write_end
+                          |          |                     __iomap_write_end
+                          |          |                     _raw_spin_unlock_irqrestore
+                          |          |          
+                          |           --0.89%--iomap_iter
+                          |                     f2fs_buffered_write_iomap_begin
+                          |                     f2fs_map_blocks
+                          |          
+                          |--5.08%--fault_in_readable
+                          |          
+                           --0.85%--f2fs_map_blocks
+                                     f2fs_is_valid_blkaddr
+
+    54.28%     0.00%  dd          dd                     [.] 0x0000aaaad9ee2d57
+            |
+            ---0xaaaad9ee2d57
+               0xaaaad9eea68f
+               read
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_read
+               ksys_read
+               vfs_read
+               __arch_clear_user
+               |          
+                --29.51%--el1h_64_sync
+                          el1h_64_sync_handler
+                          el1_abort
+                          |          
+                           --28.20%--do_mem_abort
+                                     do_translation_fault
+                                     do_page_fault
+                                     handle_mm_fault
+                                     __handle_mm_fault
+                                     |          
+                                     |--27.35%--do_huge_pmd_anonymous_page
+                                     |          |          
+                                     |          |--26.50%--vma_alloc_anon_folio_pmd
+                                     |          |          |          
+                                     |          |          |--24.80%--__pi_clear_page
+                                     |          |          |          
+                                     |          |           --1.71%--folio_zero_user
+                                     |          |          
+                                     |           --0.85%--alloc_pages_noprof
+                                     |                     alloc_frozen_pages_noprof
+                                     |                     alloc_pages_mpol
+                                     |                     __alloc_frozen_pages_noprof
+                                     |                     __pi_clear_page
+                                     |          
+                                      --0.85%--folio_add_lru_vma
+                                                __folio_batch_add_and_move
+                                                folio_batch_move_lru
+                                                folio_lruvec_lock_irqsave
+
+    54.28%     0.00%  dd          dd                     [.] 0x0000aaaad9eea68f
+            |
+            ---0xaaaad9eea68f
+               read
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_read
+               ksys_read
+               vfs_read
+               __arch_clear_user
+               |          
+                --29.51%--el1h_64_sync
+                          el1h_64_sync_handler
+                          el1_abort
+                          |          
+                           --28.20%--do_mem_abort
+                                     do_translation_fault
+                                     do_page_fault
+                                     handle_mm_fault
+                                     __handle_mm_fault
+                                     |          
+                                     |--27.35%--do_huge_pmd_anonymous_page
+                                     |          |          
+                                     |          |--26.50%--vma_alloc_anon_folio_pmd
+                                     |          |          |          
+                                     |          |          |--24.80%--__pi_clear_page
+                                     |          |          |          
+                                     |          |           --1.71%--folio_zero_user
+                                     |          |          
+                                     |           --0.85%--alloc_pages_noprof
+                                     |                     alloc_frozen_pages_noprof
+                                     |                     alloc_pages_mpol
+                                     |                     __alloc_frozen_pages_noprof
+                                     |                     __pi_clear_page
+                                     |          
+                                      --0.85%--folio_add_lru_vma
+                                                __folio_batch_add_and_move
+                                                folio_batch_move_lru
+                                                folio_lruvec_lock_irqsave
+
+    54.28%     0.00%  dd          libc.so.6              [.] read
+            |
+            ---read
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_read
+               ksys_read
+               vfs_read
+               __arch_clear_user
+               |          
+                --29.51%--el1h_64_sync
+                          el1h_64_sync_handler
+                          el1_abort
+                          |          
+                           --28.20%--do_mem_abort
+                                     do_translation_fault
+                                     do_page_fault
+                                     handle_mm_fault
+                                     __handle_mm_fault
+                                     |          
+                                     |--27.35%--do_huge_pmd_anonymous_page
+                                     |          |          
+                                     |          |--26.50%--vma_alloc_anon_folio_pmd
+                                     |          |          |          
+                                     |          |          |--24.80%--__pi_clear_page
+                                     |          |          |          
+                                     |          |           --1.71%--folio_zero_user
+                                     |          |          
+                                     |           --0.85%--alloc_pages_noprof
+                                     |                     alloc_frozen_pages_noprof
+                                     |                     alloc_pages_mpol
+                                     |                     __alloc_frozen_pages_noprof
+                                     |                     __pi_clear_page
+                                     |          
+                                      --0.85%--folio_add_lru_vma
+                                                __folio_batch_add_and_move
+                                                folio_batch_move_lru
+                                                folio_lruvec_lock_irqsave
+
+    54.28%     0.00%  dd          [kernel.kallsyms]      [k] __arm64_sys_read
+            |
+            ---__arm64_sys_read
+               ksys_read
+               vfs_read
+               __arch_clear_user
+               |          
+                --29.51%--el1h_64_sync
+                          el1h_64_sync_handler
+                          el1_abort
+                          |          
+                           --28.20%--do_mem_abort
+                                     do_translation_fault
+                                     do_page_fault
+                                     handle_mm_fault
+                                     __handle_mm_fault
+                                     |          
+                                     |--27.35%--do_huge_pmd_anonymous_page
+                                     |          |          
+                                     |          |--26.50%--vma_alloc_anon_folio_pmd
+                                     |          |          |          
+                                     |          |          |--24.80%--__pi_clear_page
+                                     |          |          |          
+                                     |          |           --1.71%--folio_zero_user
+                                     |          |          
+                                     |           --0.85%--alloc_pages_noprof
+                                     |                     alloc_frozen_pages_noprof
+                                     |                     alloc_pages_mpol
+                                     |                     __alloc_frozen_pages_noprof
+                                     |                     __pi_clear_page
+                                     |          
+                                      --0.85%--folio_add_lru_vma
+                                                __folio_batch_add_and_move
+                                                folio_batch_move_lru
+                                                folio_lruvec_lock_irqsave
+
+    54.28%     0.00%  dd          [kernel.kallsyms]      [k] ksys_read
+            |
+            ---ksys_read
+               vfs_read
+               __arch_clear_user
+               |          
+                --29.51%--el1h_64_sync
+                          el1h_64_sync_handler
+                          el1_abort
+                          |          
+                           --28.20%--do_mem_abort
+                                     do_translation_fault
+                                     do_page_fault
+                                     handle_mm_fault
+                                     __handle_mm_fault
+                                     |          
+                                     |--27.35%--do_huge_pmd_anonymous_page
+                                     |          |          
+                                     |          |--26.50%--vma_alloc_anon_folio_pmd
+                                     |          |          |          
+                                     |          |          |--24.80%--__pi_clear_page
+                                     |          |          |          
+                                     |          |           --1.71%--folio_zero_user
+                                     |          |          
+                                     |           --0.85%--alloc_pages_noprof
+                                     |                     alloc_frozen_pages_noprof
+                                     |                     alloc_pages_mpol
+                                     |                     __alloc_frozen_pages_noprof
+                                     |                     __pi_clear_page
+                                     |          
+                                      --0.85%--folio_add_lru_vma
+                                                __folio_batch_add_and_move
+                                                folio_batch_move_lru
+                                                folio_lruvec_lock_irqsave
+
+    54.28%    24.77%  dd          [kernel.kallsyms]      [k] __arch_clear_user
+            |          
+            |--29.51%--__arch_clear_user
+            |          el1h_64_sync
+            |          el1h_64_sync_handler
+            |          el1_abort
+            |          |          
+            |           --28.20%--do_mem_abort
+            |                     do_translation_fault
+            |                     do_page_fault
+            |                     handle_mm_fault
+            |                     __handle_mm_fault
+            |                     |          
+            |                     |--27.35%--do_huge_pmd_anonymous_page
+            |                     |          |          
+            |                     |          |--26.50%--vma_alloc_anon_folio_pmd
+            |                     |          |          |          
+            |                     |          |          |--24.80%--__pi_clear_page
+            |                     |          |          |          
+            |                     |          |           --1.71%--folio_zero_user
+            |                     |          |          
+            |                     |           --0.85%--alloc_pages_noprof
+            |                     |                     alloc_frozen_pages_noprof
+            |                     |                     alloc_pages_mpol
+            |                     |                     __alloc_frozen_pages_noprof
+            |                     |                     __pi_clear_page
+            |                     |          
+            |                      --0.85%--folio_add_lru_vma
+            |                                __folio_batch_add_and_move
+            |                                folio_batch_move_lru
+            |                                folio_lruvec_lock_irqsave
+            |          
+             --24.77%--0xaaaad9ee3a2f
+                       __libc_start_main
+                       0xffffb34584c3
+                       0xaaaad9ee2d57
+                       0xaaaad9eea68f
+                       read
+                       el0t_64_sync
+                       el0t_64_sync_handler
+                       el0_svc
+                       do_el0_svc
+                       el0_svc_common.constprop.0
+                       invoke_syscall
+                       __arm64_sys_read
+                       ksys_read
+                       vfs_read
+                       __arch_clear_user
+
+    54.28%     0.00%  dd          [kernel.kallsyms]      [k] vfs_read
+            |
+            ---vfs_read
+               __arch_clear_user
+               |          
+                --29.51%--el1h_64_sync
+                          el1h_64_sync_handler
+                          el1_abort
+                          |          
+                           --28.20%--do_mem_abort
+                                     do_translation_fault
+                                     do_page_fault
+                                     handle_mm_fault
+                                     __handle_mm_fault
+                                     |          
+                                     |--27.35%--do_huge_pmd_anonymous_page
+                                     |          |          
+                                     |          |--26.50%--vma_alloc_anon_folio_pmd
+                                     |          |          |          
+                                     |          |          |--24.80%--__pi_clear_page
+                                     |          |          |          
+                                     |          |           --1.71%--folio_zero_user
+                                     |          |          
+                                     |           --0.85%--alloc_pages_noprof
+                                     |                     alloc_frozen_pages_noprof
+                                     |                     alloc_pages_mpol
+                                     |                     __alloc_frozen_pages_noprof
+                                     |                     __pi_clear_page
+                                     |          
+                                      --0.85%--folio_add_lru_vma
+                                                __folio_batch_add_and_move
+                                                folio_batch_move_lru
+                                                folio_lruvec_lock_irqsave
+
+    41.71%     0.00%  dd          dd                     [.] 0x0000aaaad9ee2e6f
+            |
+            ---0xaaaad9ee2e6f
+               0xaaaad9eeaed7
+               write
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_write
+               ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               |          
+               |--35.78%--f2fs_buffered_write_iter
+               |          iomap_file_buffered_write
+               |          |          
+               |          |--34.89%--iomap_write_iter
+               |          |          |          
+               |          |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          |          __arch_copy_from_user
+               |          |          |          
+               |          |          |--8.77%--fault_in_readable
+               |          |          |          
+               |          |           --0.84%--iomap_write_end
+               |          |                     __iomap_write_end
+               |          |                     _raw_spin_unlock_irqrestore
+               |          |          
+               |           --0.89%--iomap_iter
+               |                     f2fs_buffered_write_iomap_begin
+               |                     f2fs_map_blocks
+               |          
+               |--5.08%--fault_in_readable
+               |          
+                --0.85%--f2fs_map_blocks
+                          f2fs_is_valid_blkaddr
+
+    41.71%     0.00%  dd          dd                     [.] 0x0000aaaad9eeaed7
+            |
+            ---0xaaaad9eeaed7
+               write
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_write
+               ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               |          
+               |--35.78%--f2fs_buffered_write_iter
+               |          iomap_file_buffered_write
+               |          |          
+               |          |--34.89%--iomap_write_iter
+               |          |          |          
+               |          |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          |          __arch_copy_from_user
+               |          |          |          
+               |          |          |--8.77%--fault_in_readable
+               |          |          |          
+               |          |           --0.84%--iomap_write_end
+               |          |                     __iomap_write_end
+               |          |                     _raw_spin_unlock_irqrestore
+               |          |          
+               |           --0.89%--iomap_iter
+               |                     f2fs_buffered_write_iomap_begin
+               |                     f2fs_map_blocks
+               |          
+               |--5.08%--fault_in_readable
+               |          
+                --0.85%--f2fs_map_blocks
+                          f2fs_is_valid_blkaddr
+
+    41.71%     0.00%  dd          libc.so.6              [.] write
+            |
+            ---write
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_write
+               ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               |          
+               |--35.78%--f2fs_buffered_write_iter
+               |          iomap_file_buffered_write
+               |          |          
+               |          |--34.89%--iomap_write_iter
+               |          |          |          
+               |          |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          |          __arch_copy_from_user
+               |          |          |          
+               |          |          |--8.77%--fault_in_readable
+               |          |          |          
+               |          |           --0.84%--iomap_write_end
+               |          |                     __iomap_write_end
+               |          |                     _raw_spin_unlock_irqrestore
+               |          |          
+               |           --0.89%--iomap_iter
+               |                     f2fs_buffered_write_iomap_begin
+               |                     f2fs_map_blocks
+               |          
+               |--5.08%--fault_in_readable
+               |          
+                --0.85%--f2fs_map_blocks
+                          f2fs_is_valid_blkaddr
+
+    41.71%     0.00%  dd          [kernel.kallsyms]      [k] __arm64_sys_write
+            |
+            ---__arm64_sys_write
+               ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               |          
+               |--35.78%--f2fs_buffered_write_iter
+               |          iomap_file_buffered_write
+               |          |          
+               |          |--34.89%--iomap_write_iter
+               |          |          |          
+               |          |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          |          __arch_copy_from_user
+               |          |          |          
+               |          |          |--8.77%--fault_in_readable
+               |          |          |          
+               |          |           --0.84%--iomap_write_end
+               |          |                     __iomap_write_end
+               |          |                     _raw_spin_unlock_irqrestore
+               |          |          
+               |           --0.89%--iomap_iter
+               |                     f2fs_buffered_write_iomap_begin
+               |                     f2fs_map_blocks
+               |          
+               |--5.08%--fault_in_readable
+               |          
+                --0.85%--f2fs_map_blocks
+                          f2fs_is_valid_blkaddr
+
+    41.71%     0.00%  dd          [kernel.kallsyms]      [k] ksys_write
+            |
+            ---ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               |          
+               |--35.78%--f2fs_buffered_write_iter
+               |          iomap_file_buffered_write
+               |          |          
+               |          |--34.89%--iomap_write_iter
+               |          |          |          
+               |          |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          |          __arch_copy_from_user
+               |          |          |          
+               |          |          |--8.77%--fault_in_readable
+               |          |          |          
+               |          |           --0.84%--iomap_write_end
+               |          |                     __iomap_write_end
+               |          |                     _raw_spin_unlock_irqrestore
+               |          |          
+               |           --0.89%--iomap_iter
+               |                     f2fs_buffered_write_iomap_begin
+               |                     f2fs_map_blocks
+               |          
+               |--5.08%--fault_in_readable
+               |          
+                --0.85%--f2fs_map_blocks
+                          f2fs_is_valid_blkaddr
+
+    41.71%     0.00%  dd          [kernel.kallsyms]      [k] vfs_write
+            |
+            ---vfs_write
+               f2fs_file_write_iter
+               |          
+               |--35.78%--f2fs_buffered_write_iter
+               |          iomap_file_buffered_write
+               |          |          
+               |          |--34.89%--iomap_write_iter
+               |          |          |          
+               |          |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          |          __arch_copy_from_user
+               |          |          |          
+               |          |          |--8.77%--fault_in_readable
+               |          |          |          
+               |          |           --0.84%--iomap_write_end
+               |          |                     __iomap_write_end
+               |          |                     _raw_spin_unlock_irqrestore
+               |          |          
+               |           --0.89%--iomap_iter
+               |                     f2fs_buffered_write_iomap_begin
+               |                     f2fs_map_blocks
+               |          
+               |--5.08%--fault_in_readable
+               |          
+                --0.85%--f2fs_map_blocks
+                          f2fs_is_valid_blkaddr
+
+    41.71%     0.00%  dd          [kernel.kallsyms]      [k] f2fs_file_write_iter
+            |
+            ---f2fs_file_write_iter
+               |          
+               |--35.78%--f2fs_buffered_write_iter
+               |          iomap_file_buffered_write
+               |          |          
+               |          |--34.89%--iomap_write_iter
+               |          |          |          
+               |          |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          |          __arch_copy_from_user
+               |          |          |          
+               |          |          |--8.77%--fault_in_readable
+               |          |          |          
+               |          |           --0.84%--iomap_write_end
+               |          |                     __iomap_write_end
+               |          |                     _raw_spin_unlock_irqrestore
+               |          |          
+               |           --0.89%--iomap_iter
+               |                     f2fs_buffered_write_iomap_begin
+               |                     f2fs_map_blocks
+               |          
+               |--5.08%--fault_in_readable
+               |          
+                --0.85%--f2fs_map_blocks
+                          f2fs_is_valid_blkaddr
+
+    35.78%     0.00%  dd          [kernel.kallsyms]      [k] f2fs_buffered_write_iter
+            |
+            ---f2fs_buffered_write_iter
+               iomap_file_buffered_write
+               |          
+               |--34.89%--iomap_write_iter
+               |          |          
+               |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          __arch_copy_from_user
+               |          |          
+               |          |--8.77%--fault_in_readable
+               |          |          
+               |           --0.84%--iomap_write_end
+               |                     __iomap_write_end
+               |                     _raw_spin_unlock_irqrestore
+               |          
+                --0.89%--iomap_iter
+                          f2fs_buffered_write_iomap_begin
+                          f2fs_map_blocks
+
+    35.78%     0.00%  dd          [kernel.kallsyms]      [k] iomap_file_buffered_write
+            |
+            ---iomap_file_buffered_write
+               |          
+               |--34.89%--iomap_write_iter
+               |          |          
+               |          |--25.28%--copy_folio_from_iter_atomic
+               |          |          __arch_copy_from_user
+               |          |          
+               |          |--8.77%--fault_in_readable
+               |          |          
+               |           --0.84%--iomap_write_end
+               |                     __iomap_write_end
+               |                     _raw_spin_unlock_irqrestore
+               |          
+                --0.89%--iomap_iter
+                          f2fs_buffered_write_iomap_begin
+                          f2fs_map_blocks
+
+    34.89%     0.00%  dd          [kernel.kallsyms]      [k] iomap_write_iter
+            |
+            ---iomap_write_iter
+               |          
+               |--25.28%--copy_folio_from_iter_atomic
+               |          __arch_copy_from_user
+               |          
+               |--8.77%--fault_in_readable
+               |          
+                --0.84%--iomap_write_end
+                          __iomap_write_end
+                          _raw_spin_unlock_irqrestore
+
+    29.51%     1.31%  dd          [kernel.kallsyms]      [k] el1_abort
+            |          
+            |--28.20%--el1_abort
+            |          do_mem_abort
+            |          do_translation_fault
+            |          do_page_fault
+            |          handle_mm_fault
+            |          __handle_mm_fault
+            |          |          
+            |          |--27.35%--do_huge_pmd_anonymous_page
+            |          |          |          
+            |          |          |--26.50%--vma_alloc_anon_folio_pmd
+            |          |          |          |          
+            |          |          |          |--24.80%--__pi_clear_page
+            |          |          |          |          
+            |          |          |           --1.71%--folio_zero_user
+            |          |          |          
+            |          |           --0.85%--alloc_pages_noprof
+            |          |                     alloc_frozen_pages_noprof
+            |          |                     alloc_pages_mpol
+            |          |                     __alloc_frozen_pages_noprof
+            |          |                     __pi_clear_page
+            |          |          
+            |           --0.85%--folio_add_lru_vma
+            |                     __folio_batch_add_and_move
+            |                     folio_batch_move_lru
+            |                     folio_lruvec_lock_irqsave
+            |          
+             --1.31%--0xaaaad9ee3a2f
+                       __libc_start_main
+                       0xffffb34584c3
+                       0xaaaad9ee2d57
+                       0xaaaad9eea68f
+                       read
+                       el0t_64_sync
+                       el0t_64_sync_handler
+                       el0_svc
+                       do_el0_svc
+                       el0_svc_common.constprop.0
+                       invoke_syscall
+                       __arm64_sys_read
+                       ksys_read
+                       vfs_read
+                       __arch_clear_user
+                       el1h_64_sync
+                       el1h_64_sync_handler
+                       el1_abort
+
+    29.51%     0.00%  dd          [kernel.kallsyms]      [k] el1h_64_sync
+            |
+            ---el1h_64_sync
+               el1h_64_sync_handler
+               el1_abort
+               |          
+                --28.20%--do_mem_abort
+                          do_translation_fault
+                          do_page_fault
+                          handle_mm_fault
+                          __handle_mm_fault
+                          |          
+                          |--27.35%--do_huge_pmd_anonymous_page
+                          |          |          
+                          |          |--26.50%--vma_alloc_anon_folio_pmd
+                          |          |          |          
+                          |          |          |--24.80%--__pi_clear_page
+                          |          |          |          
+                          |          |           --1.71%--folio_zero_user
+                          |          |          
+                          |           --0.85%--alloc_pages_noprof
+                          |                     alloc_frozen_pages_noprof
+                          |                     alloc_pages_mpol
+                          |                     __alloc_frozen_pages_noprof
+                          |                     __pi_clear_page
+                          |          
+                           --0.85%--folio_add_lru_vma
+                                     __folio_batch_add_and_move
+                                     folio_batch_move_lru
+                                     folio_lruvec_lock_irqsave
+
+    29.51%     0.00%  dd          [kernel.kallsyms]      [k] el1h_64_sync_handler
+            |
+            ---el1h_64_sync_handler
+               el1_abort
+               |          
+                --28.20%--do_mem_abort
+                          do_translation_fault
+                          do_page_fault
+                          handle_mm_fault
+                          __handle_mm_fault
+                          |          
+                          |--27.35%--do_huge_pmd_anonymous_page
+                          |          |          
+                          |          |--26.50%--vma_alloc_anon_folio_pmd
+                          |          |          |          
+                          |          |          |--24.80%--__pi_clear_page
+                          |          |          |          
+                          |          |           --1.71%--folio_zero_user
+                          |          |          
+                          |           --0.85%--alloc_pages_noprof
+                          |                     alloc_frozen_pages_noprof
+                          |                     alloc_pages_mpol
+                          |                     __alloc_frozen_pages_noprof
+                          |                     __pi_clear_page
+                          |          
+                           --0.85%--folio_add_lru_vma
+                                     __folio_batch_add_and_move
+                                     folio_batch_move_lru
+                                     folio_lruvec_lock_irqsave
+
+    28.20%     0.00%  dd          [kernel.kallsyms]      [k] do_mem_abort
+            |
+            ---do_mem_abort
+               do_translation_fault
+               do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               |          
+               |--27.35%--do_huge_pmd_anonymous_page
+               |          |          
+               |          |--26.50%--vma_alloc_anon_folio_pmd
+               |          |          |          
+               |          |          |--24.80%--__pi_clear_page
+               |          |          |          
+               |          |           --1.71%--folio_zero_user
+               |          |          
+               |           --0.85%--alloc_pages_noprof
+               |                     alloc_frozen_pages_noprof
+               |                     alloc_pages_mpol
+               |                     __alloc_frozen_pages_noprof
+               |                     __pi_clear_page
+               |          
+                --0.85%--folio_add_lru_vma
+                          __folio_batch_add_and_move
+                          folio_batch_move_lru
+                          folio_lruvec_lock_irqsave
+
+    28.20%     0.00%  dd          [kernel.kallsyms]      [k] do_translation_fault
+            |
+            ---do_translation_fault
+               do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               |          
+               |--27.35%--do_huge_pmd_anonymous_page
+               |          |          
+               |          |--26.50%--vma_alloc_anon_folio_pmd
+               |          |          |          
+               |          |          |--24.80%--__pi_clear_page
+               |          |          |          
+               |          |           --1.71%--folio_zero_user
+               |          |          
+               |           --0.85%--alloc_pages_noprof
+               |                     alloc_frozen_pages_noprof
+               |                     alloc_pages_mpol
+               |                     __alloc_frozen_pages_noprof
+               |                     __pi_clear_page
+               |          
+                --0.85%--folio_add_lru_vma
+                          __folio_batch_add_and_move
+                          folio_batch_move_lru
+                          folio_lruvec_lock_irqsave
+
+    28.20%     0.00%  dd          [kernel.kallsyms]      [k] do_page_fault
+            |
+            ---do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               |          
+               |--27.35%--do_huge_pmd_anonymous_page
+               |          |          
+               |          |--26.50%--vma_alloc_anon_folio_pmd
+               |          |          |          
+               |          |          |--24.80%--__pi_clear_page
+               |          |          |          
+               |          |           --1.71%--folio_zero_user
+               |          |          
+               |           --0.85%--alloc_pages_noprof
+               |                     alloc_frozen_pages_noprof
+               |                     alloc_pages_mpol
+               |                     __alloc_frozen_pages_noprof
+               |                     __pi_clear_page
+               |          
+                --0.85%--folio_add_lru_vma
+                          __folio_batch_add_and_move
+                          folio_batch_move_lru
+                          folio_lruvec_lock_irqsave
+
+    28.20%     0.00%  dd          [kernel.kallsyms]      [k] handle_mm_fault
+            |
+            ---handle_mm_fault
+               __handle_mm_fault
+               |          
+               |--27.35%--do_huge_pmd_anonymous_page
+               |          |          
+               |          |--26.50%--vma_alloc_anon_folio_pmd
+               |          |          |          
+               |          |          |--24.80%--__pi_clear_page
+               |          |          |          
+               |          |           --1.71%--folio_zero_user
+               |          |          
+               |           --0.85%--alloc_pages_noprof
+               |                     alloc_frozen_pages_noprof
+               |                     alloc_pages_mpol
+               |                     __alloc_frozen_pages_noprof
+               |                     __pi_clear_page
+               |          
+                --0.85%--folio_add_lru_vma
+                          __folio_batch_add_and_move
+                          folio_batch_move_lru
+                          folio_lruvec_lock_irqsave
+
+    28.20%     0.00%  dd          [kernel.kallsyms]      [k] __handle_mm_fault
+            |
+            ---__handle_mm_fault
+               |          
+               |--27.35%--do_huge_pmd_anonymous_page
+               |          |          
+               |          |--26.50%--vma_alloc_anon_folio_pmd
+               |          |          |          
+               |          |          |--24.80%--__pi_clear_page
+               |          |          |          
+               |          |           --1.71%--folio_zero_user
+               |          |          
+               |           --0.85%--alloc_pages_noprof
+               |                     alloc_frozen_pages_noprof
+               |                     alloc_pages_mpol
+               |                     __alloc_frozen_pages_noprof
+               |                     __pi_clear_page
+               |          
+                --0.85%--folio_add_lru_vma
+                          __folio_batch_add_and_move
+                          folio_batch_move_lru
+                          folio_lruvec_lock_irqsave
+
+    27.35%     0.00%  dd          [kernel.kallsyms]      [k] do_huge_pmd_anonymous_page
+            |
+            ---do_huge_pmd_anonymous_page
+               |          
+               |--26.50%--vma_alloc_anon_folio_pmd
+               |          |          
+               |          |--24.80%--__pi_clear_page
+               |          |          
+               |           --1.71%--folio_zero_user
+               |          
+                --0.85%--alloc_pages_noprof
+                          alloc_frozen_pages_noprof
+                          alloc_pages_mpol
+                          __alloc_frozen_pages_noprof
+                          __pi_clear_page
+
+    26.50%     0.00%  dd          [kernel.kallsyms]      [k] vma_alloc_anon_folio_pmd
+            |
+            ---vma_alloc_anon_folio_pmd
+               |          
+               |--24.80%--__pi_clear_page
+               |          
+                --1.71%--folio_zero_user
+
+    25.65%    25.65%  dd          [kernel.kallsyms]      [k] __pi_clear_page
+            |
+            ---0xaaaad9ee3a2f
+               __libc_start_main
+               0xffffb34584c3
+               0xaaaad9ee2d57
+               0xaaaad9eea68f
+               read
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_read
+               ksys_read
+               vfs_read
+               __arch_clear_user
+               el1h_64_sync
+               el1h_64_sync_handler
+               el1_abort
+               do_mem_abort
+               do_translation_fault
+               do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               do_huge_pmd_anonymous_page
+               |          
+               |--24.80%--vma_alloc_anon_folio_pmd
+               |          __pi_clear_page
+               |          
+                --0.85%--alloc_pages_noprof
+                          alloc_frozen_pages_noprof
+                          alloc_pages_mpol
+                          __alloc_frozen_pages_noprof
+                          __pi_clear_page
+
+    25.28%    25.28%  dd          [kernel.kallsyms]      [k] __arch_copy_from_user
+            |
+            ---0xaaaad9ee3a2f
+               __libc_start_main
+               0xffffb34584c3
+               0xaaaad9ee2e6f
+               0xaaaad9eeaed7
+               write
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_write
+               ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               f2fs_buffered_write_iter
+               iomap_file_buffered_write
+               iomap_write_iter
+               copy_folio_from_iter_atomic
+               __arch_copy_from_user
+
+    25.28%     0.00%  dd          [kernel.kallsyms]      [k] copy_folio_from_iter_atomic
+            |
+            ---copy_folio_from_iter_atomic
+               __arch_copy_from_user
+
+    13.85%    13.85%  dd          [kernel.kallsyms]      [k] fault_in_readable
+            |
+            ---0xaaaad9ee3a2f
+               __libc_start_main
+               0xffffb34584c3
+               0xaaaad9ee2e6f
+               0xaaaad9eeaed7
+               write
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_write
+               ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               |          
+               |--8.77%--f2fs_buffered_write_iter
+               |          iomap_file_buffered_write
+               |          iomap_write_iter
+               |          fault_in_readable
+               |          
+                --5.08%--fault_in_readable
+
+     2.80%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el0t_64_sync
+            |
+            ---el0t_64_sync
+               el0t_64_sync_handler
+               |          
+                --2.15%--el0_da
+                          do_mem_abort
+                          do_page_fault
+                          handle_mm_fault
+                          |          
+                           --2.14%--__handle_mm_fault
+                                     do_wp_page
+                                     |          
+                                      --1.92%--copy_user_highpage
+                                                __pi_copy_page
+
+     2.80%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el0t_64_sync_handler
+            |
+            ---el0t_64_sync_handler
+               |          
+                --2.15%--el0_da
+                          do_mem_abort
+                          do_page_fault
+                          handle_mm_fault
+                          |          
+                           --2.14%--__handle_mm_fault
+                                     do_wp_page
+                                     |          
+                                      --1.92%--copy_user_highpage
+                                                __pi_copy_page
+
+     2.54%     0.01%  rw_test.sh  [kernel.kallsyms]      [k] handle_mm_fault
+            |          
+             --2.53%--handle_mm_fault
+                       __handle_mm_fault
+                       |          
+                        --2.14%--do_wp_page
+                                  |          
+                                   --1.92%--copy_user_highpage
+                                             __pi_copy_page
+
+     2.54%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_mem_abort
+            |
+            ---do_mem_abort
+               |          
+                --2.15%--do_page_fault
+                          handle_mm_fault
+                          |          
+                           --2.14%--__handle_mm_fault
+                                     do_wp_page
+                                     |          
+                                      --1.92%--copy_user_highpage
+                                                __pi_copy_page
+
+     2.54%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_page_fault
+            |
+            ---do_page_fault
+               handle_mm_fault
+               |          
+                --2.53%--__handle_mm_fault
+                          |          
+                           --2.14%--do_wp_page
+                                     |          
+                                      --1.92%--copy_user_highpage
+                                                __pi_copy_page
+
+     2.53%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __handle_mm_fault
+            |
+            ---__handle_mm_fault
+               |          
+                --2.14%--do_wp_page
+                          |          
+                           --1.92%--copy_user_highpage
+                                     __pi_copy_page
+
+     2.34%     0.00%  rw_test.sh  bash                   [.] main
+            |
+            ---main
+               |          
+                --1.95%--reader_loop
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          |          
+                           --1.92%--execute_command
+                                     execute_command_internal
+                                     execute_command
+                                     execute_command_internal
+                                     execute_command
+                                     execute_command_internal
+                                     execute_command
+                                     execute_command_internal
+                                     execute_command
+                                     execute_command_internal
+                                     execute_command_internal
+                                     0xaaaab39f9ee3
+                                     dispose_words
+                                     el0t_64_sync
+                                     el0t_64_sync_handler
+                                     el0_da
+                                     do_mem_abort
+                                     do_page_fault
+                                     handle_mm_fault
+                                     __handle_mm_fault
+                                     do_wp_page
+                                     copy_user_highpage
+                                     __pi_copy_page
+
+     2.15%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el0_da
+            |
+            ---el0_da
+               do_mem_abort
+               do_page_fault
+               handle_mm_fault
+               |          
+                --2.14%--__handle_mm_fault
+                          do_wp_page
+                          |          
+                           --1.92%--copy_user_highpage
+                                     __pi_copy_page
+
+     2.14%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_wp_page
+            |
+            ---do_wp_page
+               |          
+                --1.92%--copy_user_highpage
+                          __pi_copy_page
+
+     2.07%     0.00%  rw_test.sh  bash                   [.] execute_command_internal
+            |
+            ---execute_command_internal
+               |          
+                --1.96%--execute_command
+                          execute_command_internal
+                          |          
+                           --1.95%--execute_command
+                                     execute_command_internal
+                                     |          
+                                      --1.92%--execute_command
+                                                execute_command_internal
+                                                execute_command
+                                                execute_command_internal
+                                                execute_command
+                                                execute_command_internal
+                                                execute_command
+                                                execute_command_internal
+                                                execute_command
+                                                execute_command_internal
+                                                execute_command_internal
+                                                0xaaaab39f9ee3
+                                                dispose_words
+                                                el0t_64_sync
+                                                el0t_64_sync_handler
+                                                el0_da
+                                                do_mem_abort
+                                                do_page_fault
+                                                handle_mm_fault
+                                                __handle_mm_fault
+                                                do_wp_page
+                                                copy_user_highpage
+                                                __pi_copy_page
+
+     1.99%     0.00%  rw_test.sh  bash                   [.] execute_command
+            |          
+             --1.98%--execute_command
+                       execute_command_internal
+                       |          
+                        --1.98%--execute_command
+                                  execute_command_internal
+                                  |          
+                                   --1.96%--execute_command
+                                             execute_command_internal
+                                             |          
+                                              --1.92%--execute_command
+                                                        execute_command_internal
+                                                        execute_command
+                                                        execute_command_internal
+                                                        execute_command
+                                                        execute_command_internal
+                                                        execute_command
+                                                        execute_command_internal
+                                                        |          
+                                                         --1.92%--execute_command
+                                                                   execute_command_internal
+                                                                   execute_command_internal
+                                                                   0xaaaab39f9ee3
+                                                                   dispose_words
+                                                                   el0t_64_sync
+                                                                   el0t_64_sync_handler
+                                                                   el0_da
+                                                                   do_mem_abort
+                                                                   do_page_fault
+                                                                   handle_mm_fault
+                                                                   __handle_mm_fault
+                                                                   do_wp_page
+                                                                   copy_user_highpage
+                                                                   __pi_copy_page
+
+     1.95%     0.00%  rw_test.sh  bash                   [.] _start
+            |
+            ---_start
+               __libc_start_main
+               0xffffb13984c3
+               main
+               reader_loop
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               |          
+                --1.92%--execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command_internal
+                          0xaaaab39f9ee3
+                          dispose_words
+                          el0t_64_sync
+                          el0t_64_sync_handler
+                          el0_da
+                          do_mem_abort
+                          do_page_fault
+                          handle_mm_fault
+                          __handle_mm_fault
+                          do_wp_page
+                          copy_user_highpage
+                          __pi_copy_page
+
+     1.95%     0.00%  rw_test.sh  libc.so.6              [.] __libc_start_main
+            |
+            ---__libc_start_main
+               0xffffb13984c3
+               main
+               reader_loop
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               |          
+                --1.92%--execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command_internal
+                          0xaaaab39f9ee3
+                          dispose_words
+                          el0t_64_sync
+                          el0t_64_sync_handler
+                          el0_da
+                          do_mem_abort
+                          do_page_fault
+                          handle_mm_fault
+                          __handle_mm_fault
+                          do_wp_page
+                          copy_user_highpage
+                          __pi_copy_page
+
+     1.95%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb13984c3
+            |
+            ---0xffffb13984c3
+               main
+               reader_loop
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               |          
+                --1.92%--execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command_internal
+                          0xaaaab39f9ee3
+                          dispose_words
+                          el0t_64_sync
+                          el0t_64_sync_handler
+                          el0_da
+                          do_mem_abort
+                          do_page_fault
+                          handle_mm_fault
+                          __handle_mm_fault
+                          do_wp_page
+                          copy_user_highpage
+                          __pi_copy_page
+
+     1.95%     0.00%  rw_test.sh  bash                   [.] reader_loop
+            |
+            ---reader_loop
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               |          
+                --1.92%--execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command
+                          execute_command_internal
+                          execute_command_internal
+                          0xaaaab39f9ee3
+                          dispose_words
+                          el0t_64_sync
+                          el0t_64_sync_handler
+                          el0_da
+                          do_mem_abort
+                          do_page_fault
+                          handle_mm_fault
+                          __handle_mm_fault
+                          do_wp_page
+                          copy_user_highpage
+                          __pi_copy_page
+
+     1.92%     1.92%  rw_test.sh  [kernel.kallsyms]      [k] __pi_copy_page
+            |
+            ---_start
+               __libc_start_main
+               0xffffb13984c3
+               main
+               reader_loop
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command
+               execute_command_internal
+               execute_command_internal
+               0xaaaab39f9ee3
+               dispose_words
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_da
+               do_mem_abort
+               do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               do_wp_page
+               copy_user_highpage
+               __pi_copy_page
+
+     1.92%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f9ee3
+            |
+            ---0xaaaab39f9ee3
+               dispose_words
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_da
+               do_mem_abort
+               do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               do_wp_page
+               copy_user_highpage
+               __pi_copy_page
+
+     1.92%     0.00%  rw_test.sh  bash                   [.] dispose_words
+            |
+            ---dispose_words
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_da
+               do_mem_abort
+               do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               do_wp_page
+               copy_user_highpage
+               __pi_copy_page
+
+     1.92%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] copy_user_highpage
+            |
+            ---copy_user_highpage
+               __pi_copy_page
+
+     1.74%     0.89%  dd          [kernel.kallsyms]      [k] f2fs_map_blocks
+            |          
+            |--0.89%--0xaaaad9ee3a2f
+            |          __libc_start_main
+            |          0xffffb34584c3
+            |          0xaaaad9ee2e6f
+            |          0xaaaad9eeaed7
+            |          write
+            |          el0t_64_sync
+            |          el0t_64_sync_handler
+            |          el0_svc
+            |          do_el0_svc
+            |          el0_svc_common.constprop.0
+            |          invoke_syscall
+            |          __arm64_sys_write
+            |          ksys_write
+            |          vfs_write
+            |          f2fs_file_write_iter
+            |          f2fs_buffered_write_iter
+            |          iomap_file_buffered_write
+            |          iomap_iter
+            |          f2fs_buffered_write_iomap_begin
+            |          f2fs_map_blocks
+            |          
+             --0.85%--f2fs_map_blocks
+                       f2fs_is_valid_blkaddr
+
+     1.71%     1.71%  dd          [kernel.kallsyms]      [k] folio_zero_user
+            |
+            ---0xaaaad9ee3a2f
+               __libc_start_main
+               0xffffb34584c3
+               0xaaaad9ee2d57
+               0xaaaad9eea68f
+               read
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_read
+               ksys_read
+               vfs_read
+               __arch_clear_user
+               el1h_64_sync
+               el1h_64_sync_handler
+               el1_abort
+               do_mem_abort
+               do_translation_fault
+               do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               do_huge_pmd_anonymous_page
+               vma_alloc_anon_folio_pmd
+               folio_zero_user
+
+     0.89%     0.00%  dd          [kernel.kallsyms]      [k] iomap_iter
+            |
+            ---iomap_iter
+               f2fs_buffered_write_iomap_begin
+               f2fs_map_blocks
+
+     0.89%     0.00%  dd          [kernel.kallsyms]      [k] f2fs_buffered_write_iomap_begin
+            |
+            ---f2fs_buffered_write_iomap_begin
+               f2fs_map_blocks
+
+     0.85%     0.00%  dd          [kernel.kallsyms]      [k] alloc_pages_noprof
+            |
+            ---alloc_pages_noprof
+               alloc_frozen_pages_noprof
+               alloc_pages_mpol
+               __alloc_frozen_pages_noprof
+               __pi_clear_page
+
+     0.85%     0.00%  dd          [kernel.kallsyms]      [k] alloc_frozen_pages_noprof
+            |
+            ---alloc_frozen_pages_noprof
+               alloc_pages_mpol
+               __alloc_frozen_pages_noprof
+               __pi_clear_page
+
+     0.85%     0.00%  dd          [kernel.kallsyms]      [k] alloc_pages_mpol
+            |
+            ---alloc_pages_mpol
+               __alloc_frozen_pages_noprof
+               __pi_clear_page
+
+     0.85%     0.00%  dd          [kernel.kallsyms]      [k] __alloc_frozen_pages_noprof
+            |
+            ---__alloc_frozen_pages_noprof
+               __pi_clear_page
+
+     0.85%     0.85%  dd          [kernel.kallsyms]      [k] f2fs_is_valid_blkaddr
+            |
+            ---0xaaaad9ee3a2f
+               __libc_start_main
+               0xffffb34584c3
+               0xaaaad9ee2e6f
+               0xaaaad9eeaed7
+               write
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_write
+               ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               f2fs_map_blocks
+               f2fs_is_valid_blkaddr
+
+     0.85%     0.85%  dd          [kernel.kallsyms]      [k] folio_lruvec_lock_irqsave
+            |
+            ---0xaaaad9ee3a2f
+               __libc_start_main
+               0xffffb34584c3
+               0xaaaad9ee2d57
+               0xaaaad9eea68f
+               read
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_read
+               ksys_read
+               vfs_read
+               __arch_clear_user
+               el1h_64_sync
+               el1h_64_sync_handler
+               el1_abort
+               do_mem_abort
+               do_translation_fault
+               do_page_fault
+               handle_mm_fault
+               __handle_mm_fault
+               folio_add_lru_vma
+               __folio_batch_add_and_move
+               folio_batch_move_lru
+               folio_lruvec_lock_irqsave
+
+     0.85%     0.00%  dd          [kernel.kallsyms]      [k] folio_add_lru_vma
+            |
+            ---folio_add_lru_vma
+               __folio_batch_add_and_move
+               folio_batch_move_lru
+               folio_lruvec_lock_irqsave
+
+     0.85%     0.00%  dd          [kernel.kallsyms]      [k] __folio_batch_add_and_move
+            |
+            ---__folio_batch_add_and_move
+               folio_batch_move_lru
+               folio_lruvec_lock_irqsave
+
+     0.85%     0.00%  dd          [kernel.kallsyms]      [k] folio_batch_move_lru
+            |
+            ---folio_batch_move_lru
+               folio_lruvec_lock_irqsave
+
+     0.84%     0.84%  dd          [kernel.kallsyms]      [k] _raw_spin_unlock_irqrestore
+            |
+            ---0xaaaad9ee3a2f
+               __libc_start_main
+               0xffffb34584c3
+               0xaaaad9ee2e6f
+               0xaaaad9eeaed7
+               write
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_write
+               ksys_write
+               vfs_write
+               f2fs_file_write_iter
+               f2fs_buffered_write_iter
+               iomap_file_buffered_write
+               iomap_write_iter
+               iomap_write_end
+               __iomap_write_end
+               _raw_spin_unlock_irqrestore
+
+     0.84%     0.00%  dd          [kernel.kallsyms]      [k] iomap_write_end
+            |
+            ---iomap_write_end
+               __iomap_write_end
+               _raw_spin_unlock_irqrestore
+
+     0.84%     0.00%  dd          [kernel.kallsyms]      [k] __iomap_write_end
+            |
+            ---__iomap_write_end
+               _raw_spin_unlock_irqrestore
+
+     0.84%     0.84%  stat        [kernel.kallsyms]      [k] d_path
+            |
+            ---0xffff84249a53
+               0xffff84245b93
+               0xffff8424472f
+               0xffff84247153
+               0xffff84231af3
+               _dl_catch_exception
+               0xffff8423159b
+               0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff84249a53
+            |
+            ---0xffff84249a53
+               0xffff84245b93
+               0xffff8424472f
+               0xffff84247153
+               0xffff84231af3
+               _dl_catch_exception
+               0xffff8423159b
+               0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff84245b93
+            |
+            ---0xffff84245b93
+               0xffff8424472f
+               0xffff84247153
+               0xffff84231af3
+               _dl_catch_exception
+               0xffff8423159b
+               0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff8424472f
+            |
+            ---0xffff8424472f
+               0xffff84247153
+               0xffff84231af3
+               _dl_catch_exception
+               0xffff8423159b
+               0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff84247153
+            |
+            ---0xffff84247153
+               0xffff84231af3
+               _dl_catch_exception
+               0xffff8423159b
+               0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff84231af3
+            |
+            ---0xffff84231af3
+               _dl_catch_exception
+               0xffff8423159b
+               0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] _dl_catch_exception
+            |
+            ---_dl_catch_exception
+               0xffff8423159b
+               0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff8423159b
+            |
+            ---0xffff8423159b
+               0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff84236e2f
+            |
+            ---0xffff84236e2f
+               0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff842367e3
+            |
+            ---0xffff842367e3
+               0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        ld-linux-aarch64.so.1  [.] 0x0000ffff8424a534
+            |
+            ---0xffff8424a534
+               el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] el0t_64_sync
+            |
+            ---el0t_64_sync
+               el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] el0t_64_sync_handler
+            |
+            ---el0t_64_sync_handler
+               el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] el0_svc
+            |
+            ---el0_svc
+               do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] do_el0_svc
+            |
+            ---do_el0_svc
+               el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] el0_svc_common.constprop.0
+            |
+            ---el0_svc_common.constprop.0
+               invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] invoke_syscall
+            |
+            ---invoke_syscall
+               __arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] __arm64_sys_mmap
+            |
+            ---__arm64_sys_mmap
+               ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] ksys_mmap_pgoff
+            |
+            ---ksys_mmap_pgoff
+               vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] vm_mmap_pgoff
+            |
+            ---vm_mmap_pgoff
+               do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] do_mmap
+            |
+            ---do_mmap
+               mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] mmap_region
+            |
+            ---mmap_region
+               __mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] __mmap_region
+            |
+            ---__mmap_region
+               perf_event_mmap
+               d_path
+
+     0.84%     0.00%  stat        [kernel.kallsyms]      [k] perf_event_mmap
+            |
+            ---perf_event_mmap
+               d_path
+
+     0.64%     0.00%  rw_test.sh  libc.so.6              [.] exit
+            |
+            ---exit
+
+     0.46%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a24847
+     0.46%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a23337
+     0.46%     0.00%  rw_test.sh  bash                   [.] command_substitute
+     0.39%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el0_ia
+     0.39%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_translation_fault
+     0.39%     0.38%  rw_test.sh  [kernel.kallsyms]      [k] filemap_map_pages
+     0.38%     0.00%  rw_test.sh  [unknown]              [k] 0xb038e0b0135d0bff
+     0.38%     0.00%  rw_test.sh  ld-linux-aarch64.so.1  [.] 0x0000ffffb157c90f
+     0.38%     0.00%  rw_test.sh  libtinfo.so.6.4        [.] 0x0000ffffb154f008
+     0.29%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f99f3
+     0.29%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a26e37
+     0.29%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3ab6f8b
+     0.29%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a16ed7
+     0.29%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a16887
+     0.29%     0.00%  rw_test.sh  bash                   [.] expand_string_assignment
+     0.26%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el0_svc
+     0.26%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_el0_svc
+     0.26%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el0_svc_common.constprop.0
+     0.26%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] invoke_syscall
+     0.23%     0.23%  mkdir       ld-linux-aarch64.so.1  [.] 0x00000000000169a0
+     0.23%     0.00%  mkdir       ld-linux-aarch64.so.1  [.] 0x0000ffff801b9a53
+     0.23%     0.00%  mkdir       ld-linux-aarch64.so.1  [.] 0x0000ffff801b59a0
+     0.19%     0.00%  rw_test.sh  bash                   [.] parse_and_execute
+     0.17%     0.12%  rw_test.sh  [kernel.kallsyms]      [k] unmap_page_range
+     0.17%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] mmput
+     0.17%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __mmput
+     0.17%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] exit_mmap
+     0.17%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] unmap_vmas
+     0.17%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] unmap_single_vma.constprop.0
+     0.14%     0.14%  rw_test.sh  [kernel.kallsyms]      [k] ptep_clear_flush
+     0.14%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb13af227
+     0.14%     0.00%  rw_test.sh  ld-linux-aarch64.so.1  [.] 0x0000ffffb157c874
+     0.12%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb13af1f7
+     0.12%     0.00%  rw_test.sh  libc.so.6              [.] _exit
+     0.12%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] pid_child_should_wake
+     0.12%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_group_exit
+     0.12%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_exit
+     0.12%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __arm64_sys_execve
+     0.12%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_execveat_common.isra.0
+     0.11%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] bprm_execve
+     0.11%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] load_elf_binary
+     0.09%     0.00%  rw_test.sh  libc.so.6              [.] malloc
+     0.09%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f9ca3
+     0.08%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a2509f
+     0.08%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f8567
+     0.08%     0.00%  rw_test.sh  bash                   [.] search_for_command
+     0.08%     0.08%  rw_test.sh  [kernel.kallsyms]      [k] __folio_throttle_swaprate
+     0.08%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a52f53
+     0.08%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb1405bac
+     0.07%     0.07%  rw_test.sh  libc.so.6              [.] getuid
+     0.07%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a4a1a3
+     0.07%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3abefff
+     0.07%     0.00%  rw_test.sh  bash                   [.] file_status
+     0.07%     0.00%  rw_test.sh  libc.so.6              [.] euidaccess
+     0.06%     0.06%  rw_test.sh  [kernel.kallsyms]      [k] _raw_spin_unlock_irqrestore
+     0.06%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] begin_new_exec
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __slab_free
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] elf_load
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] vm_mmap
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] vm_mmap_pgoff
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_mmap
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] mmap_region
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __mmap_region
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] perf_event_mmap
+     0.05%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] kfree
+     0.05%     0.05%  rw_test.sh  [kernel.kallsyms]      [k] _raw_spin_lock
+     0.04%     0.00%  rw_test.sh  bash                   [.] wait_for
+     0.03%     0.01%  rw_test.sh  bash                   [.] make_child
+     0.03%     0.03%  rw_test.sh  bash                   [.] hash_search
+     0.03%     0.00%  rw_test.sh  bash                   [.] set_pipestatus_array
+     0.03%     0.00%  rw_test.sh  bash                   [.] find_variable
+     0.03%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f2223
+     0.03%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39fa62b
+     0.03%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f51f7
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] handle_softirqs
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el1h_64_irq
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el1h_64_irq_handler
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el1_interrupt
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] irq_exit_rcu
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __irq_exit_rcu
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_softirq_own_stack
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] call_on_irq_stack
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] ____do_softirq
+     0.02%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __softirqentry_text_start
+     0.02%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f1bd3
+     0.02%     0.00%  rw_test.sh  bash                   [.] sh_regmatch
+     0.02%     0.00%  rw_test.sh  libc.so.6              [.] regcomp
+     0.02%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb1444133
+     0.02%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb1437c2b
+     0.02%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb1405b8b
+     0.02%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb1404b13
+     0.02%     0.00%  rw_test.sh  libc.so.6              [.] __default_morecore
+     0.02%     0.00%  rw_test.sh  libc.so.6              [.] __sbrk
+     0.02%     0.00%  rw_test.sh  libc.so.6              [.] brk
+     0.01%     0.01%  rw_test.sh  [kernel.kallsyms]      [k] __ptep_set_access_flags
+     0.01%     0.01%  rw_test.sh  [kernel.kallsyms]      [k] rcu_core
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] rcu_core_si
+     0.01%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a4a133
+     0.01%     0.00%  rw_test.sh  libc.so.6              [.] fstatat64
+     0.01%     0.01%  rw_test.sh  [kernel.kallsyms]      [k] v9fs_fid_lookup
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __arm64_sys_newfstatat
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __do_sys_newfstatat
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] vfs_fstatat
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] vfs_statx
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] vfs_getattr_nosec
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] v9fs_vfs_getattr_dotl
+     0.01%     0.01%  rw_test.sh  libc.so.6              [.] ioctl
+     0.01%     0.00%  rw_test.sh  bash                   [.] get_new_window_size
+     0.01%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f8ab3
+     0.01%     0.00%  rw_test.sh  bash                   [.] shell_execve
+     0.01%     0.00%  rw_test.sh  libc.so.6              [.] execve
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] mm_init
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] alloc_bprm
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] mm_alloc
+     0.01%     0.01%  rw_test.sh  libc.so.6              [.] 0x00000000000a1a80
+     0.01%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a2644b
+     0.01%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3a245cf
+     0.01%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb1411a80
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __arm64_sys_brk
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_brk_flags
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] mas_store_gfp
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] mas_wr_store_entry
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] mas_wr_node_store
+     0.01%     0.01%  rw_test.sh  libc.so.6              [.] __close
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __set_task_comm
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] perf_iterate_sb
+     0.01%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] perf_event_comm
+     0.01%     0.00%  rw_test.sh  libc.so.6              [.] sigprocmask
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] bsearch
+     0.00%     0.00%  rw_test.sh  libc.so.6              [.] pthread_sigmask
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] set_pte_range
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __pi_clear_page
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] pgd_alloc
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] alloc_pages_noprof
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] alloc_frozen_pages_noprof
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] alloc_pages_mpol
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __alloc_frozen_pages_noprof
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] _raw_spin_unlock_irq
+     0.00%     0.00%  rw_test.sh  bash                   [.] executing_line_number
+     0.00%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab39f4e3b
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] folio_unlock
+     0.00%     0.00%  rw_test.sh  bash                   [.] close_buffered_fd
+     0.00%     0.00%  rw_test.sh  libc.so.6              [.] cfree
+     0.00%     0.00%  rw_test.sh  libc.so.6              [.] 0x0000ffffb1404490
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] tty_ioctl
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __arm64_sys_ioctl
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] ret_from_fork
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] schedule_tail
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] finish_task_switch.isra.0
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __mmdrop
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] pgd_free
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] kmem_cache_free
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el1_abort
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] mod_objcg_state
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __memcg_slab_free_hook
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el1h_64_sync
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] el1h_64_sync_handler
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] find_stack
+     0.00%     0.00%  rw_test.sh  bash                   [.] 0x0000aaaab3abf983
+     0.00%     0.00%  rw_test.sh  libc.so.6              [.] wait4
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __arm64_sys_wait4
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __do_sys_wait4
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] kernel_wait4
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] do_wait
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] schedule
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __schedule
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] free_to_partial_list
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] set_track_prepare
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] stack_depot_save
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] stack_depot_save_flags
+     0.00%     0.00%  rw_test.sh  [kernel.kallsyms]      [k] __task_pid_nr_ns
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

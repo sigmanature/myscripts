@@ -1,0 +1,1 @@
+hdparm --set-sector-size 4096 --please-destroy-my-drive /dev/vdb
