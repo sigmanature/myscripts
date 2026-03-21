@@ -5,12 +5,33 @@
 export BASE="/home/nzzhao/learn_os"          # 根目录
 export IMG_BASE="${BASE}/images"                # 镜像文件存放目录
 export SCRIPT="${BASE}/myscripts"
-
-# 各镜像的UUID（关键！用 blkid 命令查你对应的img文件）
-export ROOT_IMG_UUID="4a125016-122e-4996-b388-ee85c127453d"       # ubuntu.img的UUID（可选，根系统用vda不变）
-export F2FS_IMG_UUID="fa9a5e62-029a-41fd-9648-c3b34f5d176e"   # f2fs_com.img的UUID（重点）
+export SHARE="${SCRIPT}/shared_with_qemu"
+export TEST="${SHARE}/test"
 
 # 默认内核目录（可选，脚本里也有默认，但这里集中管理）
 export DEFAULT_KERDIR="${BASE}/f2fs_upstream"
 # 默认内存
 export DEFAULT_MEM="8184M"
+
+kobj() {
+  local src_root=$BASE/f2fs
+  local out_root=$BASE/f2fs_upstream
+  local arch=arm64
+  local cross=aarch64-linux-gnu-
+
+  local input="$1"
+  local target="${input%.c}.o"
+
+  make -C "$src_root" \
+    O="$out_root" \
+    ARCH="$arch" \
+    CROSS_COMPILE="$cross" \
+    olddefconfig >/dev/null
+
+  make -C "$src_root" \
+    O="$out_root" \
+    ARCH="$arch" \
+    CROSS_COMPILE="$cross" \
+    V=1 \
+    "$target"
+}
