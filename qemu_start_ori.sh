@@ -89,7 +89,6 @@ qemu-system-aarch64 \
     -drive format=raw,file=$IMG_BASE/ubuntu.img,if=virtio,id=rootdisk \
     -drive format=raw,file=$IMG_BASE/f2fs.img,if=virtio,id=f2fsnorm \
     -virtfs local,path=$SCRIPT/shared_with_qemu,mount_tag=hostshare,security_model=passthrough,id=hostshare \
-    -virtfs local,path=$SCRIPT/modshare,mount_tag=modshare,security_model=passthrough,id=modshare \
     -append "panic=5 noinitrd root=/dev/vda rw console=ttyAMA0 nokaslr loglevel=8 ramoops.mem_address=0x1FF800000 ramoops.mem_size=0x200000 ramoops.record_size=0x20000 ramoops.console_size=0x20000 panic_on_oops=1 sysrq_always_enabled" \
     -s | tee guest_console.log
     # -drive format=raw,file=smallf2fs.img,if=virtio,id=smallf2fsdisk \
