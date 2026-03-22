@@ -58,6 +58,15 @@ def read_file(path: str) -> bytes:
     with open(path, "rb") as f:
         return f.read()
 
+def log(msg: str) -> None:
+    print(msg, flush=True)
+
+def dump_bytes(label: str, data: bytes, start: int, length: int = 16) -> None:
+    end = min(len(data), start + length)
+    chunk = data[start:end]
+    hexs = " ".join(f"{b:02x}" for b in chunk)
+    log(f"{label}: off={start} len={len(chunk)} bytes=[{hexs}]")
+
 def expected_pattern(size: int) -> bytearray:
     # Deterministic baseline: byte i = i % 251 (avoid obvious repetition like 256)
     out = bytearray(size)
@@ -66,18 +75,24 @@ def expected_pattern(size: int) -> bytearray:
     return out
 
 def mm_write(path: str, length: int, writes: Tuple[Tuple[int, bytes], ...]) -> None:
+    log(f"MM_WRITE begin path={path} len={length} inode={stat_inode(path)} writes={[(off, bs.hex()) for off, bs in writes]}")
     fd = os.open(path, os.O_RDWR)
     try:
         mm = mmap.mmap(fd, length, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)
         try:
             for off, bs in writes:
+                log(f"MM_WRITE store off={off} size={len(bs)} data={bs.hex()}")
                 mm[off:off+len(bs)] = bs
             mm.flush()  # msync
+            log("MM_WRITE flush done")
         finally:
             mm.close()
+            log("MM_WRITE close done")
         os.fsync(fd)
+        log("MM_WRITE fsync done")
     finally:
         os.close(fd)
+        log("MM_WRITE end")
 
 def count_events_between_markers(trace: str, start: str, end: str) -> int:
     lines = trace.splitlines()
@@ -108,6 +123,10 @@ def assert_equal(a: bytes, b: bytes, context: str) -> None:
         m = next((i for i in range(min(len(a), len(b))) if a[i] != b[i]), None)
         raise AssertionError(f"{context}: mismatch at offset {m}, got={a[m]:02x}, expect={b[m]:02x}")
 
+def stat_inode(path: str) -> int:
+    return os.stat(path).st_ino
+
+
 def run_test_with_trace(name: str, fn) -> Tuple[TestResult, int]:
     start = f"=== {name} START ==="
     end = f"=== {name} END ==="
@@ -125,10 +144,13 @@ def test1_single_page(mount_dir: str) -> Tuple[str, int]:
     size = 64 * 1024
     base = expected_pattern(size)
     fill_file(path, bytes(base))
+    log(f"TEST t1 start path={path} inode={stat_inode(path)} size={size}")
+    dump_bytes("TEST t1 base-before", base, 112)
 
     # write one byte in one 4K page
     off = 123
     base[off] = 0x5A
+    dump_bytes("TEST t1 base-after", base, 112)
     mm_write(path, size, ((off, b"\x5A"),))
 
     drop_caches()
@@ -137,16 +159,27 @@ def test1_single_page(mount_dir: str) -> Tuple[str, int]:
     return path, 1  # expected mkwrite count = 1 distinct page
 
 def test2_four_pages_same_16k_folio(mount_dir: str) -> Tuple[str, int]:
+    drop_caches()
     path = os.path.join(mount_dir, "t2_4pages_samefolio.bin")
     size = 64 * 1024
     base = expected_pattern(size)
     fill_file(path, bytes(base))
+    log(f"TEST t2 start path={path} inode={stat_inode(path)} size={size}")
+    dump_bytes("TEST t2 base-before@0", base, 0)
+    dump_bytes("TEST t2 base-before@4096", base, PAGE)
+    dump_bytes("TEST t2 base-before@8192", base, 2 * PAGE)
+    dump_bytes("TEST t2 base-before@12288", base, 3 * PAGE)
 
     # touch 4 different 4K pages inside first 16K (offsets: 0, 4096, 8192, 12288)
     writes = []
     for i, off in enumerate((0, PAGE, 2*PAGE, 3*PAGE)):
         base[off] = (0xA0 + i) & 0xFF
         writes.append((off, bytes([base[off]])))
+    log(f"TEST t2 writes={[(off, bs.hex()) for off, bs in writes]}")
+    dump_bytes("TEST t2 base-after@0", base, 0)
+    dump_bytes("TEST t2 base-after@4096", base, PAGE)
+    dump_bytes("TEST t2 base-after@8192", base, 2 * PAGE)
+    dump_bytes("TEST t2 base-after@12288", base, 3 * PAGE)
 
     mm_write(path, size, tuple(writes))
     drop_caches()
@@ -155,15 +188,19 @@ def test2_four_pages_same_16k_folio(mount_dir: str) -> Tuple[str, int]:
     return path, 4  # 4 distinct 4K pages => 4 write faults (first write per page)
 
 def test3_cross_16k_folio_boundary(mount_dir: str) -> Tuple[str, int]:
+    drop_caches()
     path = os.path.join(mount_dir, "t3_cross_folio.bin")
     size = 128 * 1024
     base = expected_pattern(size)
     fill_file(path, bytes(base))
+    log(f"TEST t3 start path={path} inode={stat_inode(path)} size={size}")
 
     # write 16 bytes starting at 16380, crossing 16K boundary (16384)
     off = FOLIO_16K - 4
     patch = bytes([0xEE] * 16)
+    dump_bytes("TEST t3 base-before", base, off, 24)
     base[off:off+16] = patch
+    dump_bytes("TEST t3 base-after", base, off, 24)
 
     mm_write(path, size, ((off, patch),))
     drop_caches()
@@ -172,25 +209,40 @@ def test3_cross_16k_folio_boundary(mount_dir: str) -> Tuple[str, int]:
     return path, 2  # crosses into next 4K page => at least 2 pages: (16380..16383) and (16384..)
 
 def test4_sigbus_write_past_eof(mount_dir: str) -> Tuple[str, int]:
+    drop_caches()
     # Run in subprocess so SIGBUS doesn't kill main runner.
     path = os.path.join(mount_dir, "t4_sigbus.bin")
     size = 4096
     fill_file(path, b"\x11" * size)
+    log(f"TEST t4 start path={path} inode={stat_inode(path)} size={size}")
 
     helper = textwrap.dedent(f"""
-        import mmap, os, sys
-        path = {path!r}
-        fd = os.open(path, os.O_RDWR)
-        try:
-            mm = mmap.mmap(fd, {size + 4096}, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)
-            # Write exactly at EOF -> should SIGBUS (pos == i_size)
-            mm[{size}] = 0x22
-            mm.flush()
-            mm.close()
-            os.fsync(fd)
-        finally:
-            os.close(fd)
-        sys.exit(0)
+    import mmap, os, sys
+
+    path = {path!r}
+    orig = {size}
+    mapsz = {size + 4096}
+
+    fd = os.open(path, os.O_RDWR)
+    try:
+        # 1) extend so mmap(length) won't fail in python
+        os.ftruncate(fd, mapsz)
+
+        mm = mmap.mmap(fd, mapsz, flags=mmap.MAP_SHARED,
+                      prot=mmap.PROT_READ | mmap.PROT_WRITE)
+
+        # 2) shrink back so offset==orig becomes EOF
+        os.ftruncate(fd, orig)
+
+        # 3) write exactly at EOF -> should SIGBUS
+        mm[orig] = 0x22
+
+        mm.flush()
+        mm.close()
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    sys.exit(0)
     """).strip()
 
     cp = subprocess.run([sys.executable, "-c", helper], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -211,6 +263,7 @@ def test5_tail_zeroing_off_in_folio(mount_dir: str) -> Tuple[str, int]:
     """
     path = os.path.join(mount_dir, "t5_tail_zeroing.bin")
     fill_file(path, b"\xCC" * 8192)
+    log(f"TEST t5 start path={path} inode={stat_inode(path)} size=8192")
 
     # shrink to 5000
     fd = os.open(path, os.O_RDWR)
@@ -242,6 +295,7 @@ def test5_tail_zeroing_off_in_folio(mount_dir: str) -> Tuple[str, int]:
 
     drop_caches()
     got = read_file(path)
+    dump_bytes("TEST t5 readback@4096", got, 4096, 32)
     tail = got[5000:8192]
     if tail != b"\x00" * len(tail):
         # show first non-zero
@@ -253,6 +307,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True, help="f2fs mount directory, e.g. /mnt/f2fs")
     ap.add_argument("--no-trace", action="store_true", help="run without tracefs verification")
+    ap.add_argument("--only", action="append", default=[],
+                    help="run only selected test(s), e.g. --only t2_4pages_samefolio")
+    ap.add_argument("--only-prefix", action="append", default=[],
+                    help="run tests whose names start with the given prefix, e.g. --only-prefix t2")
     args = ap.parse_args()
 
     if not os.path.isdir(args.dir):
@@ -275,8 +333,25 @@ def main():
         ("t5_tail_zeroing_off_in_folio", lambda: test5_tail_zeroing_off_in_folio(args.dir)),
     ]
 
+    if args.only:
+        only = set(args.only)
+        tests = [(name, tf) for name, tf in tests if name in only]
+        missing = sorted(only - {name for name, _ in tests})
+        if missing:
+            raise SystemExit(f"unknown --only test(s): {', '.join(missing)}")
+
+    if args.only_prefix:
+        prefixes = tuple(args.only_prefix)
+        tests = [(name, tf) for name, tf in tests if name.startswith(prefixes)]
+        if not tests:
+            raise SystemExit(f"no tests matched --only-prefix: {', '.join(args.only_prefix)}")
+
+    if args.only or args.only_prefix:
+        log(f"RUNNER selected tests={','.join(name for name, _ in tests)}")
+
     results = []
     for name, tf in tests:
+        log(f"RUNNER begin test={name}")
         if not args.no_trace:
             def wrapped():
                 path, exp = tf()
@@ -293,14 +368,16 @@ def main():
             ev = count_events_between_markers(tr, f"=== {name} START ===", f"=== {name} END ===")
             path = getattr(wrapped, "path", "?")
             exp = getattr(wrapped, "exp", None)
+            ino = stat_inode(path) if path != "?" and os.path.exists(path) else -1
 
             if exp is not None and ev != exp:
-                results.append(TestResult(name, False, f"{path}: trace mkwrite events={ev}, expected={exp}"))
+                results.append(TestResult(name, False, f"{path} inode={ino}: trace mkwrite events={ev}, expected={exp}"))
             else:
-                results.append(TestResult(name, True, f"{path}: trace mkwrite events={ev}"))
+                results.append(TestResult(name, True, f"{path} inode={ino}: trace mkwrite events={ev}"))
         else:
             path, _exp = tf()
-            results.append(TestResult(name, True, f"{path}: (no trace mode)"))
+            ino = stat_inode(path) if os.path.exists(path) else -1
+            results.append(TestResult(name, True, f"{path} inode={ino}: (no trace mode)"))
 
     if not args.no_trace:
         enable_tracepoint(False)
