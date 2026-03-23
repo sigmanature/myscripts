@@ -1,73 +1,85 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""rw_test_refactored.py
+
+Refactor goals (based on rw_test.py):
+- Reduce duplication.
+- Support non-zero + non-block-aligned offset and size.
+- Support:
+  * write (w) with optional verify
+  * verify-write (v) that can also operate on existing files (--allow-existing)
+  * verify-only (no write)
+- Pattern generation supports:
+  * stream (constant memory)
+  * direct (allocate full pattern in memory to amplify memory pressure)
+- 'disk' verify path for buffered I/O prototyping:
+  * fsync
+  * sync
+  * drop_caches
+  * reopen + readback verify
+
+NOTE: drop_caches requires root and impacts global system cache.
+"""
+
+import argparse
 import os
 import sys
 import time
-import argparse
-import binascii  # For hex output similar to hexdump
+from typing import Iterator, Tuple, Optional
 
-# --- Size Parsing Function (Python equivalent of bash function) ---
-def parse_bytes(size_str):
-   """
-   Parses a size string with optional units (k, m, g, b) into bytes.
-   Units are case-insensitive. 'b' or no unit means bytes.
-   """
-   size_str = str(size_str).strip().lower()
-   if not size_str:
-       raise ValueError("Size string cannot be empty")
+# -----------------------------
+# Utility
+# -----------------------------
 
-   unit = size_str[-1]
-   if unit.isalpha():
-       num_part = size_str[:-1]
-       if unit == 'k':
-           factor = 1024
-       elif unit == 'm':
-           factor = 1024 * 1024
-       elif unit == 'g':
-           factor = 1024 * 1024 * 1024
-       elif unit == 'b':
-           factor = 1
-       else:
-           raise ValueError(f"Invalid unit '{unit}' in '{size_str}'")
-   else:
-       # No unit or ends with a digit
-       num_part = size_str
-       factor = 1  # Default to bytes
+def parse_bytes(size_str: str) -> int:
+    """Parse '123', '4k', '10m', '1g', '512b' into bytes."""
+    s = str(size_str).strip().lower()
+    if not s:
+        raise ValueError("Size string cannot be empty")
 
-   if not num_part.isdigit():
-       # Check if the original string was just a unit character like 'k'
-       if len(size_str) == 1 and size_str.isalpha():
-           raise ValueError(f"Missing number before unit in '{size_str}'")
-       # Otherwise, invalid number part
-       raise ValueError(f"Invalid number part '{num_part}' in '{size_str}'")
+    unit = s[-1]
+    if unit.isalpha():
+        num_part = s[:-1]
+        if unit == 'k':
+            factor = 1024
+        elif unit == 'm':
+            factor = 1024 * 1024
+        elif unit == 'g':
+            factor = 1024 * 1024 * 1024
+        elif unit == 'b':
+            factor = 1
+        else:
+            raise ValueError(f"Invalid unit '{unit}' in '{s}'")
+    else:
+        num_part = s
+        factor = 1
 
-   try:
-       num = int(num_part)
-   except ValueError:
-       raise ValueError(f"Could not convert number '{num_part}' to integer in '{size_str}'")
+    if not num_part.isdigit():
+        if len(s) == 1 and s.isalpha():
+            raise ValueError(f"Missing number before unit in '{s}'")
+        raise ValueError(f"Invalid number part '{num_part}' in '{s}'")
 
-   return num * factor
+    return int(num_part) * factor
 
 
-# --- Hexdump Function (Simplified version) ---
-def hex_dump(data, bytes_per_line=16):
-   """
-   Formats binary data into a hex dump string similar to hexdump -C.
-   """
-   lines = []
-   for i in range(0, len(data), bytes_per_line):
-       chunk = data[i:i + bytes_per_line]
-       hex_part = ' '.join(f'{b:02x}' for b in chunk)
-       hex_part = hex_part.ljust(bytes_per_line * 3 - 1)
-       ascii_part = ''.join(chr(b) if 32 <= b < 127 else '.' for b in chunk)
-       lines.append(f"{i:08x}  {hex_part}  |{ascii_part}|")
-   return '\n'.join(lines)
+def hex_dump(data: bytes, bytes_per_line: int = 16) -> str:
+    lines = []
+    for i in range(0, len(data), bytes_per_line):
+        chunk = data[i:i + bytes_per_line]
+        hex_part = ' '.join(f'{b:02x}' for b in chunk)
+        hex_part = hex_part.ljust(bytes_per_line * 3 - 1)
+        ascii_part = ''.join(chr(b) if 32 <= b < 127 else '.' for b in chunk)
+        lines.append(f"{i:08x}  {hex_part}  |{ascii_part}|")
+    return '\n'.join(lines)
 
-def dump_aligned_blocks(filename, offset_bytes, size_bytes, block_size=4096, max_dump_bytes=64*1024, title=""):
-    """
-    Dump blocks aligned to block_size that intersect [offset_bytes, offset_bytes + size_bytes).
-    - block_size default 4096
-    - max_dump_bytes limits output to avoid terminal explosion
-    """
+
+def dump_aligned_blocks(filename: str,
+                        offset_bytes: int,
+                        size_bytes: int,
+                        block_size: int = 4096,
+                        max_dump_bytes: int = 64 * 1024,
+                        title: str = "") -> None:
+    """Dump block-aligned region intersecting [offset, offset+size). Debug helper."""
     if size_bytes <= 0:
         print(f"[dump] size=0, skip. {title}".strip())
         return
@@ -84,7 +96,8 @@ def dump_aligned_blocks(filename, offset_bytes, size_bytes, block_size=4096, max
     if title:
         print(f"[Block-aligned dump] {title}")
     print(f"block_size={block_size}  aligned_range=[{start}, {end})  total={total} bytes")
-    print(f"write_range =[{offset_bytes}, {offset_bytes + size_bytes})")
+    print(f"target_range=[{offset_bytes}, {offset_bytes + size_bytes})")
+
     if total > max_dump_bytes:
         print(f"(Output truncated) total {total} > max_dump_bytes {max_dump_bytes}, only dumping first {max_dump_bytes} bytes.")
         end = start + max_dump_bytes
@@ -99,433 +112,491 @@ def dump_aligned_blocks(filename, offset_bytes, size_bytes, block_size=4096, max
         print("=" * 70)
         return
 
-    # Print hexdump with base offset shown as aligned start
-    # hex_dump() prints offsets starting at 0; we remap by prefixing line offsets.
-    # Simple way: reuse hex_dump and just tell the user the base.
     print(f"(Base offset shown below is relative; add {start} to get file offsets)")
     print(hex_dump(data))
     print("=" * 70 + "\n")
-# --- Helpers for verification / pattern generation ---
-def generate_write_pattern(size_bytes: int) -> bytes:
-   """Generate the same write pattern used by perform_write()."""
-   if size_bytes <= 0:
-       return b""
-   pattern = b"PyWrtDta"
-   full_pattern = (pattern * (size_bytes // len(pattern) + 1))
-   return full_pattern[:size_bytes]
 
 
-def clamp_read_window(start: int, end: int, file_size: int):
-   """Clamp a [start, end) range into file bounds."""
-   start = max(0, start)
-   end = min(file_size, end)
-   if end < start:
-       end = start
-   return start, end
+# -----------------------------
+# Pattern generation
+# -----------------------------
+
+def _repeat_bytes(token: bytes, start_idx: int, n: int) -> bytes:
+    """Return n bytes repeating token, starting from token[start_idx]."""
+    if n <= 0:
+        return b""
+    if not token:
+        raise ValueError("pattern token cannot be empty")
+
+    L = len(token)
+    start_idx %= L
+
+    # Build with minimal overhead.
+    out = bytearray(n)
+    # First partial
+    first = min(n, L - start_idx)
+    out[:first] = token[start_idx:start_idx + first]
+    filled = first
+    while filled < n:
+        take = min(L, n - filled)
+        out[filled:filled + take] = token[:take]
+        filled += take
+    return bytes(out)
 
 
-# --- Main Operation Functions ---
-def perform_write(filename, offset_bytes, size_bytes, keep_file):
-   """
-   Performs the write operation: write data, flush, fsync.
-   Initializes the file if it doesn't exist or is too small.
-   """
-   print(f"--- Write Operation ---")
-   print(f"Target File: {filename}")
-   print(f"Offset: {offset_bytes} bytes")
-   print(f"Size: {size_bytes} bytes")
-   print("-" * 30)
+def iter_expected_chunks(
+    offset: int,
+    size: int,
+    mode: str,
+    token: bytes,
+    seed: int,
+    chunk_size: int,
+) -> Iterator[Tuple[int, bytes]]:
+    """Yield (relative_pos, expected_bytes_chunk) for [offset, offset+size)."""
+    pos = 0
+    while pos < size:
+        n = min(chunk_size, size - pos)
 
-   data_to_write = generate_write_pattern(size_bytes)
+        if mode == 'counter':
+            base = seed + offset + pos
+            # byte = (base + i) & 0xFF
+            b = bytes(((base + i) & 0xFF) for i in range(n))
+        elif mode == 'repeat':
+            # region-local repeat: starts at token[0] for this region
+            start_idx = pos
+            b = _repeat_bytes(token, start_idx, n)
+        elif mode == 'filepos':
+            # file-position anchored repeat: starts based on absolute file pos
+            start_idx = offset + pos
+            b = _repeat_bytes(token, start_idx, n)
+        else:
+            raise ValueError(f"Unknown pattern mode: {mode}")
 
-   # --- Pre-check and Initialization ---
-   required_size = offset_bytes + size_bytes
-   initialized = False
-   if not os.path.exists(filename) or os.path.getsize(filename) < required_size:
-       print(f"Initializing '{filename}' to at least {required_size} bytes...")
-       try:
-           os.makedirs(os.path.dirname(filename) or '.', exist_ok=True)
-           with open(filename, "wb") as f_init:
-               if required_size > 0:
-                   f_init.seek(required_size - 1)
-                   f_init.write(b'\x00')
-               else:
-                   pass
-           print(f"'{filename}' initialized/resized to {os.path.getsize(filename)} bytes.")
-           initialized = True
-       except Exception as e:
-           print(f"Error during file initialization: {e}")
-           return False
+        yield pos, b
+        pos += n
 
-   if not initialized:
-       print(f"'{filename}' already exists with {os.path.getsize(filename)} bytes. Proceeding.")
-
-   print("-" * 30)
-
-   try:
-       print(f"Step 1: Opening '{filename}' in 'r+b' mode.")
-       with open(filename, "r+b") as f:
-           print(f"Step 2: Seeking to offset {offset_bytes}.")
-           f.seek(offset_bytes)
-
-           print(f"Step 3: Writing data:  (length: {len(data_to_write)})")
-           bytes_written = f.write(data_to_write)
-           print(f"   {bytes_written} bytes passed to write() call.")
-           if bytes_written != len(data_to_write):
-               print(f"   Warning: Expected to write {len(data_to_write)} bytes, but write() returned {bytes_written}")
-
-           print("Step 4: Calling f.flush() to push data to OS page cache.")
-           f.flush()
-           print("   f.flush() completed.")
-
-           # print(f"Step 5: Calling os.fsync({f.fileno()}) to force write-back to disk.")
-           # start_sync_time = time.perf_counter()
-           # os.fsync(f.fileno())
-           # end_sync_time = time.perf_counter()
-           # print(f"   os.fsync() completed in {end_sync_time - start_sync_time:.6f} seconds.")
-
-       print(f"Step 6: File '{filename}' closed.")
-       print("-" * 30)
-       print("Write operation finished.")
-       return True
-
-   except FileNotFoundError:
-       print(f"Error: File '{filename}' not found unexpectedly after check/init.")
-       return False
-   except PermissionError:
-       print(f"Error: Permission denied for '{filename}'. Check permissions.")
-       return False
-   except OSError as e:
-       print(f"An OS error occurred during file operation: {e}")
-       return False
-   except Exception as e:
-       print(f"An unexpected error occurred during write: {e}")
-       import traceback
-       traceback.print_exc()
-       return False
+def generate_expected_direct(
+    offset: int,
+    size: int,
+    mode: str,
+    token: bytes,
+    seed: int,
+    chunk_size: int,
+) -> bytes:
+    """Generate full expected bytes into memory (stress test friendly)."""
+    # Use chunk join so filepos/repeat/counter all share logic.
+    parts = []
+    for _, b in iter_expected_chunks(offset, size, mode, token, seed, chunk_size):
+        parts.append(b)
+    return b"".join(parts)
 
 
-def perform_read(filename, offset_bytes, size_bytes, keep_file):
-   """
-   Performs the read operation.
-   - If the file exists, it reads from it directly.
-   - If the file does NOT exist, it creates a new zero-filled file and then reads from it.
-   """
-   print(f"--- Read Operation ---")
-   print(f"Target File: {filename}")
-   print(f"Offset: {offset_bytes} bytes")
-   print(f"Size: {size_bytes} bytes")
-   print("-" * 30)
+# -----------------------------
+# Buffered I/O helpers
+# -----------------------------
 
-   # 1. 检查文件是否存在
-   if not os.path.exists(filename):
-       # --- 文件不存在：执行创建逻辑 ---
-       print(f"File '{filename}' does not exist. Creating it first.")
+def ensure_parent_dir(path: str) -> None:
+    d = os.path.dirname(path) or '.'
+    os.makedirs(d, exist_ok=True)
 
-       file_size_to_create = max(offset_bytes + size_bytes, size_bytes * 10)
-       if size_bytes == 0 and offset_bytes > 0:
-           file_size_to_create = max(file_size_to_create, offset_bytes)
-       if file_size_to_create < 0:
-           file_size_to_create = 0
-
-       print(f"Creating file with size {file_size_to_create} bytes (filled with zeros)...")
-       try:
-           os.makedirs(os.path.dirname(filename) or '.', exist_ok=True)
-           with open(filename, "wb") as f_create:
-               if file_size_to_create > 0:
-                   f_create.seek(file_size_to_create - 1)
-                   f_create.write(b'\x00')
-           print(f"File '{filename}' created with size {os.path.getsize(filename)} bytes.")
-       except Exception as e:
-           print(f"Error during file creation: {e}")
-           return False
-   else:
-       print(f"File '{filename}' already exists (size: {os.path.getsize(filename)} bytes). Proceeding to read.")
-
-   print("-" * 30)
-
-   # 2. 执行读取操作
-   if size_bytes <= 0:
-       print("Read size is 0. No data to display.")
-       return True
-
-   try:
-       print(f"Reading {size_bytes} bytes from offset {offset_bytes}...")
-       with open(filename, "rb") as f_read:
-           file_size = os.fstat(f_read.fileno()).st_size
-           if file_size < offset_bytes + size_bytes:
-               print(f"Warning: The file size ({file_size} bytes) is smaller than the requested read area (up to {offset_bytes + size_bytes} bytes).")
-               print("         The read may be partial or return empty data.")
-
-           f_read.seek(offset_bytes)
-           read_data = f_read.read(size_bytes)
-
-       print(f"Read {len(read_data)} bytes. Displaying hex dump:")
-       print("-" * 30)
-       if read_data:
-           # print(hex_dump(read_data))
-           print("read data:sucessfull")
-           pass
-       else:
-           print("(No data read or empty data)")
-       print("-" * 30)
-       print("Read operation finished.")
-       return True
-
-   except FileNotFoundError:
-       print(f"Error: File '{filename}' not found unexpectedly.")
-       return False
-   except PermissionError:
-       print(f"Error: Permission denied for '{filename}'. Check permissions.")
-       return False
-   except OSError as e:
-       print(f"An OS error occurred during file read: {e}")
-       return False
-   except Exception as e:
-       print(f"An unexpected error occurred during read: {e}")
-       import traceback
-       traceback.print_exc()
-       return False
+def ensure_size_sparse(path: str, required_size: int) -> None:
+    """Ensure file size >= required_size by ftruncate (sparse extension)."""
+    if required_size <= 0:
+        return
+    st = os.stat(path)
+    if st.st_size >= required_size:
+        return
+    with open(path, 'r+b') as f:
+        os.ftruncate(f.fileno(), required_size)
 
 
-def perform_verify_write(filename, offset_bytes, size_bytes, keep_file):
-   """
-   Verify write correctness.
-
-   Rules:
-     - If file does NOT exist: create it (zero-filled / sparse), then write+verify.
-     - If file exists: exit (fail) and MUST NOT delete that file.
-     - size_bytes must be <= 128 KiB.
-
-   Verification:
-     - Compare written region with expected pattern.
-     - Sample-check surrounding bytes remain zero (helps offset/block misalignment cases).
-   """
-   print(f"--- Verify-Write Operation ---")
-   print(f"Target File: {filename}")
-   print(f"Offset: {offset_bytes} bytes")
-   print(f"Size: {size_bytes} bytes")
-   print("-" * 30)
-
-   MAX_VERIFY = 128 * 1024
-   if size_bytes < 0 or offset_bytes < 0:
-       print("Error: Offset/size cannot be negative.")
-       return False
-   if size_bytes > MAX_VERIFY:
-       print(f"Error: verify 模式下写入量不能超过 128K（当前: {size_bytes}）。")
-       return False
-
-   # If file exists -> exit
-   if os.path.exists(filename):
-       print(f"Error: File '{filename}' already exists. verify 模式要求文件不存在，避免误伤。")
-       return False
-
-   # Create file (zero-filled, sparse)
-   # Add tail padding so we can sample-check after the write area.
-   tail_padding = 4096
-   required_size = offset_bytes + size_bytes + tail_padding
-   if required_size < 0:
-       required_size = 0
-
-   print(f"Creating new file '{filename}' with size {required_size} bytes (zero-filled/sparse)...")
-   try:
-       os.makedirs(os.path.dirname(filename) or '.', exist_ok=True)
-       with open(filename, "wb") as f_create:
-           if required_size > 0:
-               # Sparse zero file (0x00). Fast for huge offsets.
-               f_create.seek(required_size - 1)
-               f_create.write(b'\x00')
-
-               # 如果你真想“字符0”(ASCII '0' = 0x30) 填满整个文件，
-               # 需要真实写满每个字节，会很慢且大 offset 会非常重：
-               # f_create.seek(0)
-               # chunk = b'0' * 4096
-               # remaining = required_size
-               # while remaining > 0:
-               #     n = min(remaining, len(chunk))
-               #     f_create.write(chunk[:n])
-               #     remaining -= n
-       print(f"File created. Size now: {os.path.getsize(filename)} bytes.")
-   except Exception as e:
-       print(f"Error during file creation: {e}")
-       return False
-
-   expected = generate_write_pattern(size_bytes)
-
-   # Read before write: target region should be zeros (for sparse 0x00 file)
-   try:
-       with open(filename, "rb") as f:
-           f.seek(offset_bytes)
-           before = f.read(size_bytes)
-   except Exception as e:
-       print(f"Error reading before-write data: {e}")
-       return False
-
-   if size_bytes > 0 and before and any(b != 0x00 for b in before):
-       print("Warning: 新建文件写入区域在写之前不是全 0x00（理论上应全 0x00）。")
-   print("Pre-check: read-before-write done.")
-
-   # Perform the write
-   try:
-       with open(filename, "r+b") as f:
-           f.seek(offset_bytes)
-           bw = f.write(expected)
-           f.flush()
-           # 如果你想验证 fsync 情况，把下面打开：
-           # os.fsync(f.fileno())
-       if bw != len(expected):
-           print(f"Warning: write() returned {bw}, expected {len(expected)}.")
-   except Exception as e:
-       print(f"Error during verify write: {e}")
-       return False
-   dump_aligned_blocks(filename, offset_bytes, size_bytes, block_size=4096, max_dump_bytes=64*1024, title="BEFORE write")
-   # Verify after write
-   try:
-       with open(filename, "rb") as f:
-           file_size = os.fstat(f.fileno()).st_size
-
-           # Read exact written region
-           f.seek(offset_bytes)
-           after = f.read(size_bytes)
-
-           # Sample windows around write region
-           window = 256
-           pre_s, pre_e = clamp_read_window(offset_bytes - window, offset_bytes, file_size)
-           post_s, post_e = clamp_read_window(offset_bytes + size_bytes, offset_bytes + size_bytes + window, file_size)
-
-           f.seek(pre_s)
-           pre_region = f.read(pre_e - pre_s)
-
-           f.seek(post_s)
-           post_region = f.read(post_e - post_s)
-
-   except Exception as e:
-       print(f"Error during verify read: {e}")
-       return False
-
-   dump_aligned_blocks(filename, offset_bytes, size_bytes, block_size=4096, max_dump_bytes=64*1024, title="AFTER write")
-   ok = True
-
-   # 1) Compare written region
-   if after != expected:
-       ok = False
-       print("\n[FAIL] Written region does NOT match expected pattern.")
-
-       mismatches = []
-       limit = min(len(after), len(expected))
-       for i in range(limit):
-           if after[i] != expected[i]:
-               mismatches.append((i, expected[i], after[i]))
-               if len(mismatches) >= 20:
-                   break
-
-       print(f"Mismatches found (showing up to {len(mismatches)}):")
-       for i, exp_b, got_b in mismatches:
-           print(f"  +{i}  expected=0x{exp_b:02x}  got=0x{got_b:02x}")
-
-       dump_len = min(128, len(expected), len(after))
-       print("\nExpected (first 128 bytes):")
-       print(hex_dump(expected[:dump_len]))
-       print("\nActual (first 128 bytes):")
-       print(hex_dump(after[:dump_len]))
-   else:
-       print("[OK] Written region matches expected pattern.")
-
-   # 2) Check surroundings remain zero
-   if any(b != 0x00 for b in pre_region):
-       ok = False
-       print(f"[FAIL] Bytes BEFORE write-region (sample {len(pre_region)} bytes) are not all 0x00.")
-   else:
-       print(f"[OK] Bytes BEFORE write-region sample remain 0x00. (sample {len(pre_region)} bytes)")
-
-   if any(b != 0x00 for b in post_region):
-       ok = False
-       print(f"[FAIL] Bytes AFTER write-region (sample {len(post_region)} bytes) are not all 0x00.")
-   else:
-       print(f"[OK] Bytes AFTER write-region sample remain 0x00. (sample {len(post_region)} bytes)")
-
-   print("-" * 30)
-   print("Verify-write operation finished.")
-   return ok
+def drop_caches(level: int) -> None:
+    """Drop global caches. Requires root. level: 1,2,3."""
+    if level not in (1, 2, 3):
+        raise ValueError("drop_caches level must be 1/2/3")
+    # Best practice: sync before dropping.
+    os.sync()
+    with open('/proc/sys/vm/drop_caches', 'w') as f:
+        f.write(str(level))
 
 
-# --- Main Execution ---
-if __name__ == "__main__":
-   parser = argparse.ArgumentParser(
-       description="Perform read or write operations on a file with fsync control.",
-       formatter_class=argparse.RawTextHelpFormatter
-   )
+def open_fd_for_write(path: str) -> int:
+    flags = os.O_RDWR | os.O_CREAT
+    # default perms: rw-r--r--
+    return os.open(path, flags, 0o644)
 
-   parser.add_argument(
-       "operation",
-       choices=['read', 'write', 'verify', "r", "w", "v"],
-       help="The operation to perform: 'read' or 'write' or 'verify'."
-   )
-   parser.add_argument(
-       "offset",
-       type=str,
-       help="Offset in the file. Supports units: b (bytes, default), k, m, g."
-   )
-   parser.add_argument(
-       "size",
-       type=str,
-       help="Size of data to read or write. Supports units: b (bytes, default), k, m, g."
-   )
-   parser.add_argument(
-       "-f", "--file",
-       default="/mnt/f2fs/com.c",
-       help="Path to the target file (default: /mnt/f2fs/com.txt)"
-   )
-   parser.add_argument(
-       "-k", "--keep-file",
-       action="store_true",
-       help="Do not delete the file after the operation completes."
-   )
 
-   args = parser.parse_args()
+def open_fd_for_read(path: str) -> int:
+    return os.open(path, os.O_RDONLY)
 
-   # --- Parse offset and size ---
-   try:
-       offset_bytes = parse_bytes(args.offset)
-       size_bytes = parse_bytes(args.size)
-       if offset_bytes < 0 or size_bytes < 0:
-           raise ValueError("Offset and size cannot be negative.")
-   except ValueError as e:
-       print(f"Error parsing arguments: {e}", file=sys.stderr)
-       parser.print_usage()
-       sys.exit(1)
 
-   # Special safety: verify 模式下，若目标文件本来就存在，cleanup 不能删它
-   preexist_for_verify = False
-   if args.operation in ["verify", "v"]:
-       preexist_for_verify = os.path.exists(args.file)
+def pwrite_all(fd: int, file_offset: int, data_iter: Iterator[Tuple[int, bytes]]) -> int:
+    total = 0
+    for rel_pos, chunk in data_iter:
+        if not chunk:
+            continue
+        # os.pwrite returns bytes written
+        n = os.pwrite(fd, chunk, file_offset + rel_pos)
+        total += n
+        if n != len(chunk):
+            raise OSError(f"Short pwrite: wrote {n} expected {len(chunk)}")
+    return total
 
-   # --- Execute requested operation ---
-   success = False
-   try:
-       if args.operation in ['write', 'w']:
-           success = perform_write(args.file, offset_bytes, size_bytes, args.keep_file)
-       elif args.operation in ['read', 'r']:
-           success = perform_read(args.file, offset_bytes, size_bytes, args.keep_file)
-       elif args.operation in ['verify', 'v']:
-           success = perform_verify_write(args.file, offset_bytes, size_bytes, args.keep_file)
-   finally:
-       # --- Cleanup ---
-       if not args.keep_file:
-           # verify 模式：如果一开始文件就存在，绝对不删
-           if (args.operation in ["verify", "v"]) and preexist_for_verify:
-               print(f"\nCleanup: verify 模式检测到文件原本就存在，跳过删除：'{args.file}'")
-           else:
-               if os.path.exists(args.file):
-                   print(f"\nCleaning up: Deleting '{args.file}'...")
-                   try:
-                       os.remove(args.file)
-                       print(f"File '{args.file}' deleted.")
-                   except Exception as e:
-                       print(f"Error deleting file '{args.file}': {e}")
-               else:
-                   print(f"\nCleanup: File '{args.file}' not found, no deletion needed.")
-       else:
-           print(f"\nSkipping cleanup: File '{args.file}' will be kept (--keep-file specified).")
 
-   sys.exit(0 if success else 1)
+def verify_stream(
+    fd: int,
+    file_offset: int,
+    size: int,
+    expected_direct: Optional[bytes],
+    expected_iter: Optional[Iterator[Tuple[int, bytes]]],
+    chunk_size: int,
+    read_mode: str,
+    max_mismatch_show: int = 16,
+) -> bool:
+    """Verify [file_offset, file_offset+size) using either direct expected or iterator.
+
+    read_mode:
+      - 'stream': pread chunk by chunk
+      - 'direct': pread full (allocates size bytes)
+    """
+    if size <= 0:
+        print("[verify] size=0, nothing to compare")
+        return True
+
+    def show_mismatch(pos: int, exp: bytes, got: bytes) -> None:
+        print(f"\n[FAIL] mismatch at +{pos} (file_off={file_offset + pos})")
+        show_len = min(256, len(exp), len(got))
+        print("Expected (first up to 256 bytes of this chunk):")
+        print(hex_dump(exp[:show_len]))
+        print("Actual (first up to 256 bytes of this chunk):")
+        print(hex_dump(got[:show_len]))
+
+    if read_mode == 'direct':
+        got = os.pread(fd, size, file_offset)
+        if len(got) != size:
+            print(f"[FAIL] readback short: got {len(got)} expected {size}")
+            return False
+        if expected_direct is None:
+            # Build expected now (still direct compare, but expected is produced by iter)
+            expected_direct = b"".join(b for _, b in expected_iter)  # type: ignore
+        if got == expected_direct:
+            print("[OK] verify pass (direct compare)")
+            return True
+        # Find first mismatch
+        limit = min(len(got), len(expected_direct))
+        mismatches = 0
+        for i in range(limit):
+            if got[i] != expected_direct[i]:
+                # Show around mismatch
+                lo = max(0, i - 64)
+                hi = min(limit, i + 64)
+                show_mismatch(i, expected_direct[lo:hi], got[lo:hi])
+                mismatches += 1
+                if mismatches >= max_mismatch_show:
+                    break
+        return False
+
+    # stream compare
+    if expected_direct is not None:
+        # slice from expected_direct
+        pos = 0
+        while pos < size:
+            n = min(chunk_size, size - pos)
+            got = os.pread(fd, n, file_offset + pos)
+            exp = expected_direct[pos:pos + n]
+            if got != exp:
+                show_mismatch(pos, exp, got)
+                return False
+            pos += n
+        print("[OK] verify pass (stream compare vs direct expected)")
+        return True
+
+    # expected as iterator
+    assert expected_iter is not None
+    for rel_pos, exp in expected_iter:
+        got = os.pread(fd, len(exp), file_offset + rel_pos)
+        if got != exp:
+            show_mismatch(rel_pos, exp, got)
+            return False
+    print("[OK] verify pass (stream compare)")
+    return True
+
+
+# -----------------------------
+# Operations
+# -----------------------------
+
+def op_write(args) -> bool:
+    """Write, optional verify."""
+    ensure_parent_dir(args.file)
+
+    preexisted = os.path.exists(args.file)
+    if not preexisted:
+        # create empty first
+        open(args.file, 'ab').close()
+    ensure_size_sparse(args.file, args.offset + args.size)
+
+    token = args.token.encode('utf-8')
+
+    if args.dump:
+        dump_aligned_blocks(args.file, args.offset, args.size, block_size=args.block_size,
+                           max_dump_bytes=args.dump_max, title="BEFORE write")
+
+    # expected source
+    expected_direct = None
+    expected_iter = None
+
+    if args.pattern_gen == 'direct':
+        print(f"[pattern] generating expected DIRECT into memory: {args.size} bytes")
+        t0 = time.perf_counter()
+        expected_direct = generate_expected_direct(args.offset, args.size, args.pattern_mode, token, args.seed, args.chunk)
+        t1 = time.perf_counter()
+        print(f"[pattern] direct generation done in {t1 - t0:.3f}s")
+        expected_iter = iter([(0, expected_direct)])  # for write, single chunk
+    else:
+        expected_iter = iter_expected_chunks(args.offset, args.size, args.pattern_mode, token, args.seed, args.chunk)
+
+    fd = None
+    try:
+        fd = open_fd_for_write(args.file)
+        written = pwrite_all(fd, args.offset, expected_iter)
+        print(f"[write] wrote {written} bytes")
+        os.fsync(fd) if args.fsync else None
+        if args.fsync:
+            print("[write] fsync done")
+    except Exception as e:
+        print(f"[FAIL] write error: {e}")
+        return False
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+    if args.dump:
+        dump_aligned_blocks(args.file, args.offset, args.size, block_size=args.block_size,
+                           max_dump_bytes=args.dump_max, title="AFTER write")
+
+    if not args.verify:
+        return True
+
+    # verify after write
+    return do_verify(args, preexisted=preexisted)
+
+
+def op_verify_write(args) -> bool:
+    """Verify-write (v): write + verify, with safety options."""
+    ensure_parent_dir(args.file)
+
+    preexisted = os.path.exists(args.file)
+    if not preexisted:
+        open(args.file, 'ab').close()
+
+    # For new file in verify-write, we often want to ensure there is some tail beyond range,
+    # but we keep it optional. We just ensure file size covers the write.
+    ensure_size_sparse(args.file, args.offset + args.size)
+
+    # Use op_write but force verify=True
+    args.verify = True
+    return op_write(args)
+
+
+def do_verify(args, preexisted: bool) -> bool:
+    """Verify-only core (can be used after write)."""
+    if not os.path.exists(args.file):
+        print(f"[FAIL] file not exist: {args.file}")
+        return False
+
+    token = args.token.encode('utf-8')
+
+    # Prepare expected
+    expected_direct = None
+    expected_iter = None
+    if args.pattern_gen == 'direct':
+        print(f"[pattern] generating expected DIRECT into memory: {args.size} bytes")
+        t0 = time.perf_counter()
+        expected_direct = generate_expected_direct(args.offset, args.size, args.pattern_mode, token, args.seed, args.chunk)
+        t1 = time.perf_counter()
+        print(f"[pattern] direct generation done in {t1 - t0:.3f}s")
+    else:
+        expected_iter = iter_expected_chunks(args.offset, args.size, args.pattern_mode, token, args.seed, args.chunk)
+
+    # (Optional) dump BEFORE dropping caches (disk-mode) or BEFORE verify read (cache-mode)
+    if args.dump and args.verify_mode != 'disk':
+        dump_aligned_blocks(args.file, args.offset, args.size, block_size=args.block_size,
+                           max_dump_bytes=args.dump_max, title=f"BEFORE verify read ({args.verify_mode})")
+
+    if args.verify_mode == 'disk':
+        # For prototype: sync + drop_caches, then reopen for read.
+        # IMPORTANT: dumping/reading the file AFTER dropping caches will warm page cache again and
+        # make the verify become memory-vs-memory. So we do NOT dump after drop here.
+        drop_level = 3
+
+        if args.dump:
+            dump_aligned_blocks(args.file, args.offset, args.size, block_size=args.block_size,
+                               max_dump_bytes=args.dump_max, title="BEFORE drop_caches (disk verify)")
+
+        print(f"[verify] disk-mode: os.sync + drop_caches({drop_level}) + reopen")
+        try:
+            t0 = time.perf_counter()
+            drop_caches(drop_level)
+            t1 = time.perf_counter()
+            print(f"[verify] drop_caches done in {t1 - t0:.3f}s")
+        except PermissionError:
+            print("[FAIL] drop_caches requires root (permission denied).")
+            print("       Try: sudo -E ./rw_test_refactored.py ... --verify-mode disk")
+            return False
+        except Exception as e:
+            print(f"[FAIL] drop_caches error: {e}")
+            return False
+
+
+    fd = None
+    try:
+        fd = open_fd_for_read(args.file)
+        if expected_direct is not None:
+            ok = verify_stream(fd, args.offset, args.size, expected_direct, None, args.chunk, args.readback)
+        else:
+            # Need a fresh iterator for verify since iterators are consumed.
+            expected_iter2 = iter_expected_chunks(args.offset, args.size, args.pattern_mode, token, args.seed, args.chunk)
+            ok = verify_stream(fd, args.offset, args.size, None, expected_iter2, args.chunk, args.readback)
+        return ok
+    except Exception as e:
+        print(f"[FAIL] verify error: {e}")
+        return False
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+def op_read(args) -> bool:
+    if not os.path.exists(args.file):
+        print(f"[FAIL] file not exist: {args.file}")
+        return False
+
+    if args.size <= 0:
+        print("[read] size=0")
+        return True
+
+    fd = None
+    try:
+        fd = open_fd_for_read(args.file)
+        data = os.pread(fd, args.size, args.offset)
+        print(f"[read] got {len(data)} bytes")
+        if args.dump:
+            print(hex_dump(data[:min(len(data), args.dump_max)]))
+        return True
+    except Exception as e:
+        print(f"[FAIL] read error: {e}")
+        return False
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
+# -----------------------------
+# CLI
+# -----------------------------
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        description="Buffered I/O rw/verify test tool (refactored).",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    p.add_argument('operation',
+                   choices=['read', 'write', 'verify', 'r', 'w', 'v'],
+                   help="operation: read(r) / write(w) / verify-write(v) / verify-only")
+    p.add_argument('offset', type=str, help='offset (supports b/k/m/g)')
+    p.add_argument('size', type=str, help='size (supports b/k/m/g)')
+
+    p.add_argument('-f', '--file', default='/tmp/rw_test.bin', help='target file')
+    p.add_argument('-k', '--keep-file', action='store_true', help='do not delete file created by this run')
+
+
+    # Sync
+    p.add_argument('--fsync', action='store_true', default=True, help='call fsync after write [default on]')
+    p.add_argument('--no-fsync', action='store_false', dest='fsync', help='disable fsync')
+
+    # Verify options
+    p.add_argument('--verify', action='store_true', help='(write) do verify after write')
+    p.add_argument('--verify-mode', choices=['cache', 'disk'], default='cache',
+                   help="verify readback mode: cache=normal read (may hit pagecache); disk=drop_caches then read")
+
+    # Pattern options
+    p.add_argument('--pattern-mode', choices=['repeat', 'filepos', 'counter'], default='repeat',
+                   help='pattern mode: repeat(region-local), filepos(file-offset anchored), counter(byte=seed+pos)')
+    p.add_argument('--token', default='PyWrtDta',
+                   help='pattern token used by repeat/filepos modes (utf-8). default=PyWrtDta')
+    p.add_argument('--seed', type=int, default=0, help='seed for counter mode')
+
+    # Memory behavior
+    p.add_argument("-pg",'--pattern-gen', choices=['stream', 'direct'], default='stream',
+                   help='expected pattern generation: stream(const mem) or direct(alloc full bytes)')
+    p.add_argument('--readback', choices=['stream', 'direct'], default='stream',
+                   help='verify readback: stream(pread chunk) or direct(pread full region into memory)')
+    p.add_argument('--chunk', type=str, default='1m',
+                   help='chunk size for streaming (supports b/k/m/g). default=1m')
+
+    # Debug dump
+    p.add_argument("-dp",'--dump', action='store_true', help='dump aligned blocks / read hex (debug)')
+    p.add_argument("-bs",'--block-size', type=str, default='4k', help='dump block size (default 4k)')
+    p.add_argument('--dump-max', type=str, default='256k', help='max dump bytes (default 256k)')
+
+    return p
+
+
+def main() -> int:
+    p = build_parser()
+    args = p.parse_args()
+
+    try:
+        args.offset = parse_bytes(args.offset)
+        args.size = parse_bytes(args.size)
+        args.chunk = parse_bytes(args.chunk)
+        args.block_size = parse_bytes(args.block_size)
+        args.dump_max = parse_bytes(args.dump_max)
+    except ValueError as e:
+        print(f"Error parsing args: {e}", file=sys.stderr)
+        p.print_usage()
+        return 2
+
+    if args.offset < 0 or args.size < 0:
+        print("[FAIL] offset/size cannot be negative")
+        return 2
+
+    preexisted = os.path.exists(args.file)
+
+    op = args.operation
+    if op == 'r':
+        op = 'read'
+    elif op == 'w':
+        op = 'write'
+    elif op == 'v':
+        op = 'verify'
+
+    ok = False
+    try:
+        if op == 'read':
+            ok = op_read(args)
+        elif op == 'write':
+            ok = op_write(args)
+        elif op == 'verify':
+            ok = op_verify_write(args)
+        else:
+            raise ValueError(f"unknown operation {op}")
+    finally:
+        # cleanup: only delete if we created the file in this run
+        if not args.keep_file:
+            if (not preexisted) and os.path.exists(args.file):
+                try:
+                    os.remove(args.file)
+                    print(f"[cleanup] deleted created file: {args.file}")
+                except Exception as e:
+                    print(f"[cleanup] failed to delete: {e}")
+            else:
+                # never delete pre-existing file
+                pass
+
+    return 0 if ok else 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
