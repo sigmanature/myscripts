@@ -1,0 +1,62 @@
+import os
+import time
+
+def ensure_dir(p: str) -> None:
+    os.makedirs(p, exist_ok=True)
+
+def open_rw(path: str, create: bool = True) -> int:
+    flags = os.O_RDWR | os.O_CLOEXEC
+    if create:
+        flags |= os.O_CREAT
+    return os.open(path, flags, 0o644)
+
+def ensure_file_size(fd: int, size: int) -> None:
+    st = os.fstat(fd)
+    if st.st_size != size:
+        os.ftruncate(fd, size)
+
+def fsync(fd: int) -> None:
+    os.fsync(fd)
+
+def pread_scan(fd: int, offset: int, size: int, chunk: int = 256 * 1024, passes: int = 1) -> int:
+    """Sequential buffered read via os.pread() (no syscall readahead)."""
+    if size <= 0 or passes <= 0:
+        return 0
+    total = 0
+    for _ in range(passes):
+        pos = 0
+        while pos < size:
+            n = min(chunk, size - pos)
+            data = os.pread(fd, n, offset + pos)
+            if not data:
+                break
+            total += len(data)
+            pos += len(data)
+    return total
+
+def _fill_pattern(buf: bytearray, seed: int, base_off: int) -> None:
+    # byte = (seed + abs_off) % 251
+    for i in range(len(buf)):
+        buf[i] = (seed + base_off + i) % 251
+
+def pwrite_pattern(fd: int, offset: int, size: int, seed: int, chunk: int = 256 * 1024) -> int:
+    """Sequential buffered write via os.pwrite()."""
+    if size <= 0:
+        return 0
+    total = 0
+    pos = 0
+    buf = bytearray(min(chunk, size))
+    while pos < size:
+        n = min(len(buf), size - pos)
+        view = buf if n == len(buf) else buf[:n]
+        _fill_pattern(view, seed=seed, base_off=offset + pos)
+        wrote = os.pwrite(fd, view, offset + pos)
+        if wrote <= 0:
+            break
+        total += wrote
+        pos += wrote
+    return total
+
+def sleep_s(seconds: float) -> None:
+    if seconds > 0:
+        time.sleep(seconds)

@@ -1,0 +1,6 @@
+================ QEMU 配置 ================
+Kernel Directory : /home/nzzhao/learn_os/f2fs_upstream
+Memory Size      : 4G
+Console Log      : /home/nzzhao/learn_os/myscripts/guest_console.log
+QMP Socket       : /tmp/qemu-qmp.sock
+===========================================

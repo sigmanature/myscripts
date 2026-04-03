@@ -1,0 +1,76 @@
+# Governance Notes
+
+## 2026-04-01 browser_search_skill_mcp discovery
+
+- Finding: repo root does not contain a top-level `worklog/`; the existing reusable staging area in this workspace is `myscripts/worklog/`.
+  - Reuse likelihood: likely
+  - Candidate landing zone: reference note or task convention only
+  - Outcome: using `myscripts/worklog/` for this task to avoid parallel conventions
+- Finding: local `find-skills` skill explicitly routes discovery and install through `npx skills find` and `npx skills add`.
+  - Reuse likelihood: likely
+  - Candidate landing zone: existing skill usage note
+  - Outcome: active in this task; validate with real browser/search queries
+- Decision: checked whether the new guidance belonged inside `find-skills` first, but split it into a new skill because permission-prefix handling, vendor-link repair, and sandbox-aware install/test orchestration are reusable outside skill discovery.
+  - Reuse likelihood: likely
+  - Candidate landing zone: new skill
+  - Outcome: promoted as `skills/codex-permission-prefix-ops`
+- Finding: the sandbox intercepts some commands even when they are read-only because network access is disabled by default and non-whitelisted binaries still require approval.
+  - Reuse likelihood: likely
+  - Candidate landing zone: new permission-aware install/test skill reference
+  - Outcome: promote into repo-local permission/prefix skill
+- Finding: I requested overly narrow approvals for local `agent-browser` commands (`--version`, `install`, `open`) instead of one reusable binary-level `prefix_rule`, which caused avoidable repeated prompts.
+  - Reuse likelihood: likely
+  - Candidate landing zone: new permission-aware install/test skill workflow
+  - Outcome: promote into repo-local permission/prefix skill
+- Finding: `npx skills add ... -g -y` installed `agent-browser` under `~/.agents/skills/agent-browser`, but it did not create `~/.codex/skills/agent-browser`.
+  - Reuse likelihood: likely
+  - Candidate landing zone: reusable sync script + skill reference
+  - Outcome: promote into repo-local permission/prefix skill
+- Finding: current approved prefixes from this session that are worth preserving in workflow guidance are `npx skills`, `npm view`, `npm search`, and `npm install -g`.
+  - Reuse likelihood: likely
+  - Candidate landing zone: new permission-aware install/test skill reference
+  - Outcome: promote into repo-local permission/prefix skill
+- Finding: `open-websearch --help` started the MCP server instead of exiting with usage text, enabling STDIO and HTTP on port `3000`.
+  - Reuse likelihood: likely
+  - Candidate landing zone: new permission-aware install/test skill reference
+  - Outcome: promoted into repo-local permission/prefix skill reference
+- Finding: `agent-browser` is not a low-risk pure JS tool. The installed package contains a `postinstall` hook that downloads platform binaries from GitHub releases and ships multiple native executables.
+  - Reuse likelihood: likely
+  - Candidate landing zone: MCP audit checklist + local audit script
+  - Outcome: promoted into repo-local permission/prefix skill
+- Finding: `open-websearch` has a cleaner supply-chain shape than `agent-browser` in this environment: no lifecycle install hooks and no native binaries were observed, but it still starts an HTTP listener on `0.0.0.0:3000` by default and has optional Playwright/browser-cookie collection paths.
+  - Reuse likelihood: likely
+  - Candidate landing zone: MCP audit checklist + local audit script
+  - Outcome: promoted into repo-local permission/prefix skill
+- Finding: local probing confirmed that `open-websearch` HTTP mode binds `0.0.0.0`, serves MCP over `text/event-stream`, and can complete a real `search` call in the current environment. A STDIO-only wrapper launched without creating an HTTP listener.
+  - Reuse likelihood: likely
+  - Candidate landing zone: open-websearch sandbox notes + probe/wrapper scripts
+  - Outcome: promoted into repo-local permission/prefix skill
+- Finding: query quality differs sharply by engine in this environment. `duckduckgo` returned OpenAI docs and `lwn.net` article results for broad technical queries, while `bing` often drifted to unrelated Zhihu/forum pages and `startpage` returned zero results for tested constrained queries.
+  - Reuse likelihood: likely
+  - Candidate landing zone: open-websearch sandbox notes
+  - Outcome: promoted into repo-local permission/prefix skill
+- Finding: local `open-websearch` installation and agent MCP registration are separate layers. The executable exists under `~/.local/bin`, but current `~/.codex/config.toml` has no `[mcp_servers.*]` entry, and current `~/.claude/settings.json` also has no active MCP registration block. A Claude backup file shows per-project `mcpServers` fields, so Claude appears to keep MCP registrations in its own config/state layer rather than discovering installed binaries automatically.
+  - Reuse likelihood: likely
+  - Candidate landing zone: new cross-agent MCP registration reference
+  - Outcome: promoted into repo-local permission/prefix skill reference
+- Finding: for local cross-agent reuse, `stdio` is the safest default shape for `open-websearch`. One shared executable or wrapper can be reused by multiple agents, but each agent still needs its own MCP registration that points at the same command path.
+  - Reuse likelihood: likely
+  - Candidate landing zone: new cross-agent MCP registration reference
+  - Outcome: promoted into repo-local permission/prefix skill reference
+
+## 2026-04-01 qemu_start_ubuntu multi-instance alignment
+
+- Finding: `qemu_start_ubuntu.sh` is a legacy multi-instance launcher but its interface diverged from `qemu_start_ori.sh`.
+  - Reuse likelihood: likely
+  - Candidate landing zone: existing script + qemu skill docs/tools
+  - Outcome: promoted into `qemu_start_ubuntu.sh`
+- Finding: current single-VM workflow hard-codes `/tmp/qga.sock`, `/tmp/qemu-qmp.sock`, and guest SSH port `5022`.
+  - Impact: blocks safe multi-VM parallel control.
+  - Reuse likelihood: likely
+  - Candidate landing zone: skill reference / tool update
+  - Outcome: partially promoted into `references/qemu-cow-multi-instance.md`; tool updates deferred pending permission to edit `.agents/tools`
+- Constraint: an active `qemu_start_ori.sh` VM is currently running and controlled by another agent. Do not reuse or mutate its sockets/ports/process.
+  - Reuse likelihood: likely
+  - Candidate landing zone: reference note
+  - Outcome: honored during validation; no action taken against the active VM

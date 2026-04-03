@@ -1,0 +1,23 @@
+{
+  "skill_name": "rw-test-harness",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "基于现有 rw_test.py 框架，给 buffered matrix 新增一组 read-then-append 非对齐测试，不要再在 shell 里写内嵌 Python。",
+      "expected_output": "The agent should edit rw_test.py as the provider, extend structured matrix case generation, keep wrappers thin, and validate with local smoke commands.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "帮我给 mmap 测试新增一个跨 folio 的双写场景，并让 mkwrite_test.py 继续作为 trace 包装器。",
+      "expected_output": "The agent should implement the mmap case in rw_test.py, register it in the builtin mmap case registry, and keep mkwrite_test.py as a thin trace-aware frontend.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "直接用这套 rw 测试框架在 /tmp 跑一个最小 smoke，验证 wp_subpage 的 mmap-case 和一个 overwrite matrix case。",
+      "expected_output": "The agent should use rw_test.py mmap-case and rw_test.py matrix, not invent new scripts, and should report local validation commands and any environment limitations.",
+      "files": []
+    }
+  ]
+}

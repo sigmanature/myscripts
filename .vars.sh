@@ -11,7 +11,7 @@ export TEST="${SHARE}/test"
 # 默认内核目录（可选，脚本里也有默认，但这里集中管理）
 export DEFAULT_KERDIR="${BASE}/f2fs_upstream"
 # 默认内存
-export DEFAULT_MEM="8184M"
+export DEFAULT_MEM="4G"
 
 kobj() {
   local src_root=$BASE/f2fs
