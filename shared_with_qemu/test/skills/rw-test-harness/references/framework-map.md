@@ -29,6 +29,12 @@
   - auto-provisions a small plain F2FS image
   - accepts a non-fs-level inline target as an existing root or block device
 
+- `case_f2fs_gc_8m_two_phase_image.py`
+  - small loop-backed two-phase GC case
+  - uses `utils/f2fs_gc.py` to pulse `f2fs_io gc_urgent` directly against the mounted loop device
+  - when running inside the shared QEMU guest, expose `f2fs_io` on `PATH` first, for example:
+    `ln -sf /root/shared_with_host/f2fs-tools/f2fs-tools/tools/f2fs_io/f2fs_io /usr/local/bin/f2fs_io`
+
 - `mkwrite_test.py`
   - thin trace-aware frontend over builtin mmap cases
 
@@ -103,6 +109,7 @@ Use wrappers only when the user needs the real target environment:
 - `./rw_matrix.sh`
 - `./rw_matrix_inline.sh`
 - `python3 f2fs_gc_long_rw.py --inline-root <mounted-inline-f2fs-root>`
+- `python3 case_f2fs_gc_8m_two_phase_image.py`
 - `python3 mkwrite_test.py --dir <mount>`
 
 These depend on mount state, root, inlinecrypt, fscrypt, or tracefs and should not be the first validation step unless the task explicitly requires environment coverage.

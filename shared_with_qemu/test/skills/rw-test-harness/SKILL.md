@@ -18,6 +18,7 @@ And a small set of thin frontends:
 - `rw_matrix.sh`
 - `rw_matrix_inline.sh`
 - `f2fs_gc_long_rw.py`
+- `case_f2fs_gc_8m_two_phase_image.py`
 - `mkwrite_test.py`
 - `mmap_wp_fault_test.py`
 
@@ -56,6 +57,7 @@ Use these entrypoints:
 - `./rw_matrix.sh ...`
 - `./rw_matrix_inline.sh ...`
 - `python3 f2fs_gc_long_rw.py ...`
+- `python3 case_f2fs_gc_8m_two_phase_image.py`
 
 When adding buffered-I/O coverage:
 
@@ -64,6 +66,7 @@ When adding buffered-I/O coverage:
 - keep `MatrixCase` and builtin matrix generation authoritative,
 - add `read_then_write` variants through the existing structured knobs rather than custom pre-read code in shell.
 - for GC/writeback long runs, keep environment orchestration in the dedicated runner and reuse `run_matrix_case()` for data verification.
+- for the small two-phase GC case, keep GC triggering in `utils/f2fs_gc.py` and use direct `f2fs_io gc_urgent` instead of sysfs writes.
 
 ### mmap family
 

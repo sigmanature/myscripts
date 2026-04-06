@@ -11,8 +11,7 @@ if THIS_DIR not in sys.path:
 from utils.io import ensure_dir, open_rw, ensure_file_size, pread_scan, pwrite_pattern, fsync, sleep_s
 from utils.sysutil import drop_caches_simple, is_root
 from utils.loop_mount import LoopMount
-from utils.f2fs_gc import find_f2fs_sysfs_dir, GcPulseThread
-from utils.churn import ChurnThread
+from utils.f2fs_gc import GcPulseThread
 
 # =========================
 # 只改这里：不加 CLI 参数
@@ -102,41 +101,37 @@ def main():
     workdir = os.path.join(MOUNTPOINT, "gc_case_8m")
     layout = prepare_layout(workdir)
 
-    # GC pulse thread (best-effort)
-    sysfs_dir = find_f2fs_sysfs_dir(MOUNTPOINT)
-    gc_thr = GcPulseThread(sysfs_dir=sysfs_dir, interval_s=GC_INTERVAL, verbose=VERBOSE)
+    # GC pulse thread: direct f2fs_io backend only
+    gc_thr = GcPulseThread(mountpoint=MOUNTPOINT, interval_s=GC_INTERVAL, verbose=VERBOSE)
     gc_thr.start()
 
-    # churn threads (inline vs normal)
-    churn_inline = ChurnThread(
-        churn_dir=layout["churn_dir_inline"],
-        inline_mode=True,
-        file_size=2 * 1024,
-        files_per_round=64,
-        keep_fraction=0.25,
-        interval_s=CHURN_INTERVAL,
-        seed=7,
-        verbose=VERBOSE,
-    )
-    churn_normal = ChurnThread(
-        churn_dir=layout["churn_dir_normal"],
-        inline_mode=False,
-        file_size=1 * 1024 * 1024,
-        files_per_round=16,
-        keep_fraction=0.25,
-        interval_s=CHURN_INTERVAL,
-        seed=11,
-        verbose=VERBOSE,
-    )
-    churn_inline.start()
-    churn_normal.start()
+    # # churn threads (inline vs normal)
+    # churn_inline = ChurnThread(
+    #     churn_dir=layout["churn_dir_inline"],
+    #     inline_mode=True,
+    #     file_size=2 * 1024,
+    #     files_per_round=64,
+    #     keep_fraction=0.25,
+    #     interval_s=CHURN_INTERVAL,
+    #     seed=7,
+    #     verbose=VERBOSE,
+    # )
+    # churn_normal = ChurnThread(
+    #     churn_dir=layout["churn_dir_normal"],
+    #     inline_mode=False,
+    #     file_size=1 * 1024 * 1024,
+    #     files_per_round=16,
+    #     keep_fraction=0.25,
+    #     interval_s=CHURN_INTERVAL,
+    #     seed=11,
+    #     verbose=VERBOSE,
+    # )
+    # churn_inline.start()
+    # churn_normal.start()
 
     print(f"[*] mounted: {MOUNTPOINT}", flush=True)
     print(f"[*] target: {layout['target_path']} ({FILE_SIZE} bytes)", flush=True)
-    if sysfs_dir:
-        print(f"[*] f2fs sysfs: {sysfs_dir} (gc pulse every {GC_INTERVAL}s)", flush=True)
-    else:
-        print("[*] f2fs sysfs not found (still running churn)", flush=True)
+    print(f"[*] gc backend: {gc_thr.backend_desc}", flush=True)
 
     group = 0
     try:
@@ -166,9 +161,7 @@ def main():
 
             if VERBOSE:
                 print(
-                    f"[group {group}] {dt:.3f}s | gc_pulses={gc_thr.pulses} ok={gc_thr.success} | "
-                    f"churn_inline(created={churn_inline.created},del={churn_inline.deleted}) "
-                    f"churn_normal(created={churn_normal.created},del={churn_normal.deleted})",
+                    f"[group {group}] {dt:.3f}s | gc_pulses={gc_thr.pulses} ok={gc_thr.success} | ",
                     flush=True,
                 )
 
@@ -180,8 +173,8 @@ def main():
     except KeyboardInterrupt:
         print("\n[!] Ctrl-C: stopping...", flush=True)
     finally:
-        churn_inline.stop()
-        churn_normal.stop()
+        # churn_inline.stop()
+        # churn_normal.stop()
         gc_thr.stop()
         time.sleep(0.2)
         lm.cleanup(verbose=VERBOSE)

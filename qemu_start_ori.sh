@@ -20,9 +20,6 @@ LOG_FILE="guest_console.log"        # 保留你原先的 guest_console.log
 QMP_SOCK="/tmp/qemu-qmp.sock"       # 新增：QMP socket
 QGA_SOCK="/tmp/qga.sock"
 APPEND_EXTRA=""
-FOREGROUND=0
-PID_FILE=""
-PID_FILE_AUTOGEN=0
 
 usage() {
   cat <<EOF
@@ -35,9 +32,7 @@ usage() {
   --qmp-sock PATH         指定 QMP unix socket (默认: ${QMP_SOCK})
   --qga-sock PATH         指定 QGA unix socket (默认: ${QGA_SOCK})
   --log FILE              指定 guest console 日志文件 (默认: ${LOG_FILE})
-  --pid-file PATH         将 QEMU PID 写入指定文件
   --append-extra STR      追加额外 kernel cmdline 参数
-  --foreground            前台运行，保留旧的 tee 诊断模式
   -h, --help              显示帮助
 EOF
 }
@@ -50,9 +45,7 @@ while [[ $# -gt 0 ]]; do
     --qmp-sock)  QMP_SOCK="$2"; shift 2;;
     --qga-sock)  QGA_SOCK="$2"; shift 2;;
     --log)       LOG_FILE="$2"; shift 2;;
-    --pid-file)  PID_FILE="$2"; shift 2;;
     --append-extra) APPEND_EXTRA="$2"; shift 2;;
-    --foreground) FOREGROUND=1; shift;;
     -h|--help)   usage; exit 0;;
     *) echo "错误: 未知选项 '$1'"; usage; exit 1;;
   esac
@@ -64,7 +57,6 @@ echo "Memory Size      : ${MEM}"
 echo "Console Log      : ${LOG_FILE}"
 echo "QMP Socket       : ${QMP_SOCK}"
 echo "QGA Socket       : ${QGA_SOCK}"
-echo "Foreground Mode  : ${FOREGROUND}"
 echo "Append Extra     : ${APPEND_EXTRA}"
 echo "==========================================="
 
@@ -78,61 +70,26 @@ fi
 rm -f "${QMP_SOCK}" "${QGA_SOCK}"
 mkdir -p "$(dirname "${LOG_FILE}")"
 
-QEMU_COMMON=(
-  qemu-system-aarch64
-  -smp 8
-  -machine virt,virtualization=true,gic-version=3
-  -m "size=${MEM}"
-  -mem-prealloc
-  -cpu cortex-a72
-  -kernel "${KERDIR}/arch/arm64/boot/Image"
-  -append "${KERNEL_APPEND}"
-  -netdev "user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80"
-  -device "virtio-net-device,netdev=eth0"
-  -chardev "socket,path=${QGA_SOCK},server=on,wait=off,id=qga0"
-  -device virtio-serial-pci
-  -device virtserialport,chardev=qga0,name=org.qemu.guest_agent.0
-  -drive "format=raw,file=${IMG_BASE}/ubuntu.img,if=virtio,id=rootdisk"
-  -drive "format=raw,file=${IMG_BASE}/f2fs.img,if=virtio,id=f2fsnorm"
-  -virtfs "local,path=${SCRIPT}/shared_with_qemu,mount_tag=hostshare,security_model=passthrough,id=hostshare"
-  -s
-  -qmp "unix:${QMP_SOCK},server=on,wait=off"
-)
-
-if [[ "${FOREGROUND}" -eq 1 ]]; then
-  # Foreground mode is kept only for diagnosis, where full stdio visibility matters.
-  "${QEMU_COMMON[@]}" -nographic 2>&1 | tee "${LOG_FILE}"
-  exit $?
-fi
-
-if [[ -z "${PID_FILE}" ]]; then
-  PID_FILE="$(mktemp /tmp/qemu-start-ori.pid.XXXXXX)"
-  PID_FILE_AUTOGEN=1
-fi
-mkdir -p "$(dirname "${PID_FILE}")"
-: > "${LOG_FILE}"
-rm -f "${PID_FILE}"
-"${QEMU_COMMON[@]}" \
+qemu-system-aarch64 \
+  -smp 8 \
+  -machine virt,virtualization=true,gic-version=3 \
   -display none \
-  -monitor none \
-  -serial "file:${LOG_FILE}" \
-  -pidfile "${PID_FILE}" \
-  -daemonize
-
-if [[ ! -s "${PID_FILE}" ]]; then
-  echo "错误: QEMU 启动后未生成 PID 文件 ${PID_FILE}" >&2
-  exit 1
-fi
-
-QEMU_PID="$(cat "${PID_FILE}")"
-if ! kill -0 "${QEMU_PID}" 2>/dev/null; then
-  echo "错误: QEMU 启动失败，请检查 ${LOG_FILE}" >&2
-  exit 1
-fi
-
-printf 'qemu_pid=%s\nconsole_log=%s\nqmp_sock=%s\nqga_sock=%s\n' \
-  "${QEMU_PID}" "${LOG_FILE}" "${QMP_SOCK}" "${QGA_SOCK}"
-
-if [[ "${PID_FILE_AUTOGEN}" -eq 1 ]]; then
-  rm -f "${PID_FILE}"
-fi
+  -m "size=${MEM}" \
+  -mem-prealloc \
+  -cpu cortex-a72 \
+  -kernel "${KERDIR}/arch/arm64/boot/Image" \
+  -append "${KERNEL_APPEND}" \
+  -netdev "user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80" \
+  -device "virtio-net-device,netdev=eth0" \
+  -chardev "stdio,id=char0,mux=on,signal=off" \
+  -mon "chardev=char0,mode=readline" \
+  -serial "chardev:char0" \
+  -chardev "socket,path=${QGA_SOCK},server=on,wait=off,id=qga0" \
+  -device virtio-serial-pci \
+  -device virtserialport,chardev=qga0,name=org.qemu.guest_agent.0 \
+  -drive "format=raw,file=${IMG_BASE}/ubuntu.img,if=virtio,id=rootdisk" \
+  -drive "format=raw,file=${IMG_BASE}/f2fs.img,if=virtio,id=f2fsnorm" \
+  -virtfs "local,path=${SCRIPT}/shared_with_qemu,mount_tag=hostshare,security_model=passthrough,id=hostshare" \
+  -s \
+  -qmp "unix:${QMP_SOCK},server=on,wait=off" \
+  2>&1 | tee "${LOG_FILE}"
