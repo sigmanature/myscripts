@@ -69,7 +69,9 @@
   - Impact: blocks safe multi-VM parallel control.
   - Reuse likelihood: likely
   - Candidate landing zone: skill reference / tool update
-  - Outcome: partially promoted into `references/qemu-cow-multi-instance.md`; tool updates deferred pending permission to edit `.agents/tools`
+  - Outcome: promoted into user-level skill reference `~/.agents/skills/f2fs-qemu-agent-pipeline/references/qemu-cow-multi-instance.md` and instance-aware tool updates:
+    - repo tools: `learn_os/.agents/tools/qga_exec.py`, `learn_os/.agents/tools/vm_start_bg.sh`, `learn_os/.agents/tools/vm_ssh.sh`, `learn_os/.agents/tools/vm_stop.sh`
+    - skill docs: updated `~/.agents/skills/f2fs-qemu-agent-pipeline/SKILL.md` to require explicit instance/sock when multiple VMs exist
 - Constraint: an active `qemu_start_ori.sh` VM is currently running and controlled by another agent. Do not reuse or mutate its sockets/ports/process.
   - Reuse likelihood: likely
   - Candidate landing zone: reference note

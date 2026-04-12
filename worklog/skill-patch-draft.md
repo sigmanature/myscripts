@@ -6,6 +6,10 @@
 - Generalize guest control helpers to accept per-instance QGA socket and SSH port.
 - Preserve existing single-instance defaults so current `qemu_start_ori.sh` flow remains unchanged.
 
+Outcome:
+- Implemented: user-level skill (`~/.agents/skills/f2fs-qemu-agent-pipeline`) updated for multi-instance parallel mode.
+- Implemented: `myscripts/qemu_start_ubuntu.sh` now emits per-instance metadata and avoids fixed `-s` gdb port conflicts.
+
 ## Proposed tool changes outside `myscripts`
 
 - `learn_os/.agents/tools/qga_exec.py`
@@ -29,3 +33,8 @@
 - Mention `qemu_start_ubuntu.sh` as the CoW multi-instance launcher.
 - Mention `instance.env` as the per-instance source of truth.
 - Document that multi-instance QGA must use instance-specific sockets instead of fixed `/tmp/qga.sock`.
+
+Status:
+- Done: `learn_os/.agents/tools/qga_exec.py` supports `--sock` / `QGA_SOCK`.
+- Done: user-level skill scripts support `--instance` (`scripts/vm_ssh.sh`, `scripts/vm_stop.sh`) and multi-instance start (`scripts/vm_start_bg.sh --launcher ubuntu-cow --instance vm2`).
+- Deferred: adding repo-local `.agents/tools/vm_ssh.sh` and `.agents/tools/vm_stop.sh` wrappers, because the user requested user-level skill ownership first.

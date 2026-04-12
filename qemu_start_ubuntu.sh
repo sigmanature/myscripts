@@ -18,8 +18,10 @@ BASE_ROOT_IMG_DEFAULT="${QEMU_BASE_ROOT_IMG:-${IMG_BASE}/ubuntu.img}"
 BASE_F2FS_IMG_DEFAULT="${QEMU_BASE_F2FS_IMG:-${IMG_BASE}/f2fs.img}"
 INSTANCE_DIR_DEFAULT="${QEMU_INSTANCE_DIR:-${SCRIPT}/vm_instances}"
 BASE_SHARE_DIR_DEFAULT="${QEMU_BASE_SHARE_DIR:-${SCRIPT}/shared_with_qemu}"
+DEFAULT_SHARE_MODE="${QEMU_SHARE_MODE:-copy}"
 DEFAULT_SSH_PORT_BASE="${QEMU_SSH_PORT_BASE:-5022}"
 DEFAULT_HTTP_PORT_BASE="${QEMU_HTTP_PORT_BASE:-5080}"
+DEFAULT_GDB_PORT_BASE="${QEMU_GDB_PORT_BASE:-1234}"
 
 COMMAND="${1:-}"
 INSTANCE_NAME="${2:-}"
@@ -44,8 +46,11 @@ start 选项:
   --f2fs-base IMG          指定 f2fs 基准镜像 (默认: ${BASE_F2FS_IMG_DEFAULT})
   --instance-dir DIR       指定实例根目录 (默认: ${INSTANCE_DIR_DEFAULT})
   --share-src DIR          指定共享目录模板 (默认: ${BASE_SHARE_DIR_DEFAULT})
+  --share-mode MODE        共享目录模式: copy|shared-ro (默认: ${DEFAULT_SHARE_MODE})
+  --share-base DIR         shared-ro 模式下的共享基目录 (默认: ${BASE_SHARE_DIR_DEFAULT})
   --ssh-port PORT          指定宿主转发到 guest 22 的端口
   --http-port PORT         指定宿主转发到 guest 80 的端口
+  --gdb-port PORT          指定 gdb stub 端口 (默认: 1234 + suffix - 1)
   --port-offset N          在默认 5022/5080 上叠加偏移量
   --qga-sock PATH          指定 QGA unix socket (默认: /tmp/qga.<实例名>.sock)
   --qmp-sock PATH          指定 QMP unix socket (默认: /tmp/qemu-qmp.<实例名>.sock)
@@ -62,6 +67,7 @@ cleanup 选项:
      http_port = ${DEFAULT_HTTP_PORT_BASE} + (suffix - 1)
   2. 如果实例名不带数字后缀，请显式传入 --ssh-port/--http-port 或 --port-offset。
   3. 每个实例都会写出 <实例目录>/instance.env，供自动化工具读取端口、socket、log 和 pid 信息。
+  4. `shared-ro` 用一份共享脚本目录给多个 VM 复用，但需要 guest 侧把输出写到 workshare（避免多个 VM 同写一份目录）。
 EOF
 }
 
@@ -105,6 +111,9 @@ derive_default_ports() {
   if [[ -z "${HTTP_PORT:-}" ]]; then
     HTTP_PORT="$((DEFAULT_HTTP_PORT_BASE + offset))"
   fi
+  if [[ -z "${GDB_PORT:-}" ]]; then
+    GDB_PORT="$((DEFAULT_GDB_PORT_BASE + offset))"
+  fi
 }
 
 instance_path_for() {
@@ -116,6 +125,7 @@ load_instance_paths() {
   INSTANCE_ROOT_IMG="${INSTANCE_PATH}/root.qcow2"
   INSTANCE_F2FS_IMG="${INSTANCE_PATH}/f2fs.qcow2"
   INSTANCE_SHARED_DIR="${INSTANCE_PATH}/shared_with_qemu"
+  INSTANCE_WORK_DIR="${INSTANCE_PATH}/workshare"
   INSTANCE_META_FILE="${INSTANCE_PATH}/instance.env"
   PID_FILE="${PID_FILE:-${INSTANCE_PATH}/qemu.pid}"
   LOG_FILE="${LOG_FILE:-${INSTANCE_PATH}/guest_console.log}"
@@ -128,8 +138,11 @@ load_instance_metadata_if_present() {
   if [[ -f "${INSTANCE_META_FILE}" ]]; then
     # shellcheck disable=SC1090
     source "${INSTANCE_META_FILE}"
+    SHARE_MODE="${VM_SHARE_MODE:-${SHARE_MODE:-${DEFAULT_SHARE_MODE}}}"
+    SHARE_BASE_DIR="${VM_SHARE_BASE_DIR:-${SHARE_BASE_DIR:-${BASE_SHARE_DIR_DEFAULT}}}"
     SSH_PORT="${VM_SSH_PORT:-${SSH_PORT:-}}"
     HTTP_PORT="${VM_HTTP_PORT:-${HTTP_PORT:-}}"
+    GDB_PORT="${VM_GDB_PORT:-${GDB_PORT:-}}"
     QGA_SOCK="${VM_QGA_SOCK:-${QGA_SOCK}}"
     QMP_SOCK="${VM_QMP_SOCK:-${QMP_SOCK}}"
     LOG_FILE="${VM_CONSOLE_LOG:-${LOG_FILE}}"
@@ -149,9 +162,14 @@ INSTANCE_PATH=${INSTANCE_PATH}
 INSTANCE_ROOT_IMG=${INSTANCE_ROOT_IMG}
 INSTANCE_F2FS_IMG=${INSTANCE_F2FS_IMG}
 INSTANCE_SHARED_DIR=${INSTANCE_SHARED_DIR}
+INSTANCE_WORK_DIR=${INSTANCE_WORK_DIR}
+VM_SHARE_MODE=${SHARE_MODE}
+VM_SHARE_BASE_DIR=${SHARE_BASE_DIR}
+VM_WORK_TAG=workshare
 VM_SSH_HOST=127.0.0.1
 VM_SSH_PORT=${SSH_PORT}
 VM_HTTP_PORT=${HTTP_PORT}
+VM_GDB_PORT=${GDB_PORT}
 VM_QGA_SOCK=${QGA_SOCK}
 VM_QMP_SOCK=${QMP_SOCK}
 VM_CONSOLE_LOG=${LOG_FILE}
@@ -170,11 +188,15 @@ instance_name=${INSTANCE_NAME}
 instance_path=${INSTANCE_PATH}
 root_overlay=${INSTANCE_ROOT_IMG}
 f2fs_overlay=${INSTANCE_F2FS_IMG}
+share_mode=${SHARE_MODE}
+share_base_dir=${SHARE_BASE_DIR}
 shared_dir=${INSTANCE_SHARED_DIR}
+work_dir=${INSTANCE_WORK_DIR}
 pid_file=${PID_FILE}
 console_log=${LOG_FILE}
 ssh_port=${SSH_PORT}
 http_port=${HTTP_PORT}
+gdb_port=${GDB_PORT}
 qga_sock=${QGA_SOCK}
 qmp_sock=${QMP_SOCK}
 status=${status}
@@ -193,7 +215,9 @@ ensure_instance_seeded() {
     exit 1
   fi
 
-  mkdir -p "${INSTANCE_PATH}" "${INSTANCE_SHARED_DIR}"
+  mkdir -p "${INSTANCE_PATH}"
+  mkdir -p "${INSTANCE_SHARED_DIR}"
+  mkdir -p "${INSTANCE_WORK_DIR}"
 
   if [[ ! -f "${INSTANCE_ROOT_IMG}" ]]; then
     echo "创建 CoW 根文件系统镜像..."
@@ -205,10 +229,24 @@ ensure_instance_seeded() {
     qemu-img create -f qcow2 -b "${BASE_F2FS_IMG}" -F raw "${INSTANCE_F2FS_IMG}"
   fi
 
-  if [[ -d "${SHARE_SRC}" ]] && [[ -z "$(find "${INSTANCE_SHARED_DIR}" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
-    echo "复制共享目录模板到实例目录..."
-    cp -a "${SHARE_SRC}/." "${INSTANCE_SHARED_DIR}/"
-  fi
+  case "${SHARE_MODE}" in
+    copy)
+      if [[ -d "${SHARE_SRC}" ]] && [[ -z "$(find "${INSTANCE_SHARED_DIR}" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+        echo "复制共享目录模板到实例目录..."
+        cp -a "${SHARE_SRC}/." "${INSTANCE_SHARED_DIR}/"
+      fi
+      ;;
+    shared-ro)
+      if [[ ! -d "${SHARE_BASE_DIR}" ]]; then
+        echo "错误: shared-ro 模式下找不到 share-base: ${SHARE_BASE_DIR}" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "错误: 未知 --share-mode: ${SHARE_MODE} (允许: copy|shared-ro)" >&2
+      exit 1
+      ;;
+  esac
 }
 
 build_qemu_command() {
@@ -232,9 +270,19 @@ build_qemu_command() {
     -device virtserialport,chardev=qga0,name=org.qemu.guest_agent.0
     -drive "format=qcow2,file=${INSTANCE_ROOT_IMG},if=virtio,id=rootdisk"
     -drive "format=qcow2,file=${INSTANCE_F2FS_IMG},if=virtio,id=f2fsnorm"
-    -virtfs "local,path=${INSTANCE_SHARED_DIR},mount_tag=hostshare,security_model=passthrough,id=hostshare"
+    # Shared directory strategy:
+    # - copy: per-instance hostshare (safe, isolates concurrent writes)
+    # - shared-ro: shared base as hostshare (readonly) + per-instance workshare (writable)
+    $(if [[ "${SHARE_MODE}" == "shared-ro" ]]; then
+        printf '%s\n' \
+          "-virtfs" "local,path=${SHARE_BASE_DIR},mount_tag=hostshare,security_model=passthrough,id=hostshare,readonly=on" \
+          "-virtfs" "local,path=${INSTANCE_WORK_DIR},mount_tag=workshare,security_model=passthrough,id=workshare"
+      else
+        printf '%s\n' \
+          "-virtfs" "local,path=${INSTANCE_SHARED_DIR},mount_tag=hostshare,security_model=passthrough,id=hostshare"
+      fi)
     -pidfile "${PID_FILE}"
-    -s
+    -gdb "tcp::${GDB_PORT}"
     -qmp "unix:${QMP_SOCK},server=on,wait=off"
   )
 }
@@ -246,10 +294,13 @@ start_instance() {
   BASE_F2FS_IMG="${BASE_F2FS_IMG_DEFAULT}"
   INSTANCE_DIR="${INSTANCE_DIR_DEFAULT}"
   SHARE_SRC="${BASE_SHARE_DIR_DEFAULT}"
+  SHARE_MODE="${DEFAULT_SHARE_MODE}"
+  SHARE_BASE_DIR="${BASE_SHARE_DIR_DEFAULT}"
   DRY_RUN=0
   PORT_OFFSET=""
   SSH_PORT=""
   HTTP_PORT=""
+  GDB_PORT=""
   QGA_SOCK=""
   QMP_SOCK=""
   LOG_FILE=""
@@ -264,8 +315,11 @@ start_instance() {
       --f2fs-base) BASE_F2FS_IMG="$2"; shift 2 ;;
       --instance-dir) INSTANCE_DIR="$2"; shift 2 ;;
       --share-src) SHARE_SRC="$2"; shift 2 ;;
+      --share-mode) SHARE_MODE="$2"; shift 2 ;;
+      --share-base) SHARE_BASE_DIR="$2"; shift 2 ;;
       --ssh-port) SSH_PORT="$2"; shift 2 ;;
       --http-port) HTTP_PORT="$2"; shift 2 ;;
+      --gdb-port) GDB_PORT="$2"; shift 2 ;;
       --port-offset) PORT_OFFSET="$2"; shift 2 ;;
       --qga-sock) QGA_SOCK="$2"; shift 2 ;;
       --qmp-sock) QMP_SOCK="$2"; shift 2 ;;
@@ -299,10 +353,14 @@ start_instance() {
   echo "Root Overlay     : ${INSTANCE_ROOT_IMG}"
   echo "F2FS Overlay     : ${INSTANCE_F2FS_IMG}"
   echo "Shared Directory : ${INSTANCE_SHARED_DIR}"
+  echo "Share Mode       : ${SHARE_MODE}"
+  echo "Share Base Dir   : ${SHARE_BASE_DIR}"
+  echo "Work Directory   : ${INSTANCE_WORK_DIR}"
   echo "Console Log      : ${LOG_FILE}"
   echo "PID File         : ${PID_FILE}"
   echo "SSH Port         : ${SSH_PORT}"
   echo "HTTP Port        : ${HTTP_PORT}"
+  echo "GDB Port         : ${GDB_PORT}"
   echo "QGA Socket       : ${QGA_SOCK}"
   echo "QMP Socket       : ${QMP_SOCK}"
   echo "========================================================"
@@ -376,8 +434,11 @@ status_instance() {
   MEM="${DEFAULT_MEM}"
   BASE_ROOT_IMG="${BASE_ROOT_IMG_DEFAULT}"
   BASE_F2FS_IMG="${BASE_F2FS_IMG_DEFAULT}"
+  SHARE_MODE="${DEFAULT_SHARE_MODE}"
+  SHARE_BASE_DIR="${BASE_SHARE_DIR_DEFAULT}"
   SSH_PORT=""
   HTTP_PORT=""
+  GDB_PORT=""
   QGA_SOCK=""
   QMP_SOCK=""
   LOG_FILE=""

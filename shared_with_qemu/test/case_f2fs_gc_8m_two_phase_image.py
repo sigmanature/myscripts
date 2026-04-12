@@ -8,10 +8,11 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 if THIS_DIR not in sys.path:
     sys.path.insert(0, THIS_DIR)
 
-from utils.io import ensure_dir, open_rw, ensure_file_size, pread_scan, pwrite_pattern, fsync, sleep_s
-from utils.sysutil import drop_caches_simple, is_root
+from utils.io import ensure_dir, open_rw, ensure_file_size, pwrite_pattern, fsync, sleep_s
+from utils.sysutil import drop_caches, is_root
 from utils.loop_mount import LoopMount
 from utils.f2fs_gc import GcPulseThread
+from utils.gc_two_phase import TwoPhaseSpec, init_file_with_baseline, make_baseline_config, run_two_phase_group_and_verify
 
 # =========================
 # 只改这里：不加 CLI 参数
@@ -33,6 +34,7 @@ CHURN_INTERVAL = 0.05
 
 VERBOSE = True
 DROP_CACHES_EACH_GROUP = True  # 最简单实现：每组 pread 前 drop caches
+VERIFY_DISK_EACH_GROUP = True
 
 # =========================
 
@@ -75,21 +77,13 @@ def prepare_layout(workdir: str) -> dict:
         "inline_path": inline_path,
     }
 
-def one_group(fd: int, seed_base: int) -> None:
-    # 1) read first 2MB (pread scan)
-    pread_scan(fd, 0, READ_FIRST, chunk=256 * 1024, passes=1)
-
-    # 2) write front 1MB + fsync
-    pwrite_pattern(fd, 0, FRONT_WRITE, seed=seed_base + 1, chunk=256 * 1024)
-    fsync(fd)
-
-    # 3) wait "较久"
-    sleep_s(SLEEP_AFTER_FRONT)
-
-    # 4) write last 1MB + fsync
-    tail_off = FILE_SIZE - TAIL_WRITE
-    pwrite_pattern(fd, tail_off, TAIL_WRITE, seed=seed_base + 2, chunk=256 * 1024)
-    fsync(fd)
+SPEC = TwoPhaseSpec(
+    file_size=FILE_SIZE,
+    read_first=READ_FIRST,
+    front_write=FRONT_WRITE,
+    tail_write=TAIL_WRITE,
+    sleep_after_front=SLEEP_AFTER_FRONT,
+)
 
 def main():
     if not is_root():
@@ -100,6 +94,11 @@ def main():
 
     workdir = os.path.join(MOUNTPOINT, "gc_case_8m")
     layout = prepare_layout(workdir)
+
+    # Initialize target file with a deterministic baseline so disk verification
+    # has a stable expected value.
+    baseline = make_baseline_config(chunk_size=256 * 1024)
+    init_file_with_baseline(layout["target_path"], FILE_SIZE, baseline=baseline)
 
     # GC pulse thread: direct f2fs_io backend only
     gc_thr = GcPulseThread(mountpoint=MOUNTPOINT, interval_s=GC_INTERVAL, verbose=VERBOSE)
@@ -149,15 +148,20 @@ def main():
 
             if DROP_CACHES_EACH_GROUP:
                 # 最简单 drop cache：每组真正 read 前做一次
-                drop_caches_simple(verbose=VERBOSE)
+                drop_caches(3)
 
-            fd_t = open_rw(layout["target_path"], create=False)
-            try:
-                t0 = time.time()
-                one_group(fd_t, seed_base=group * 100)
-                dt = time.time() - t0
-            finally:
-                os.close(fd_t)
+            t0 = time.time()
+            ok = run_two_phase_group_and_verify(
+                layout["target_path"],
+                spec=SPEC,
+                seed_base=group * 100,
+                baseline=baseline,
+                chunk_size=256 * 1024,
+                verify_disk=VERIFY_DISK_EACH_GROUP,
+            )
+            dt = time.time() - t0
+            if not ok:
+                raise SystemExit(f"disk verify failed at group={group}")
 
             if VERBOSE:
                 print(

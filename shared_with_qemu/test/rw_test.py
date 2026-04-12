@@ -12,7 +12,6 @@ Goals:
 from __future__ import annotations
 
 import argparse
-import errno
 import mmap
 import os
 import signal
@@ -21,6 +20,27 @@ import sys
 import time
 from dataclasses import dataclass
 from typing import Iterable, Iterator, Optional, Sequence, Tuple
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+if THIS_DIR not in sys.path:
+    sys.path.insert(0, THIS_DIR)
+
+from utils.io import read_fd_discard, read_region_discard
+from utils.patterns import (
+    PatternConfig,
+    generate_expected_direct,
+    iter_expected_chunks,
+    parse_bytes,
+    render_pattern_bytes,
+)
+from utils.sysutil import best_effort_drop_caches, drop_caches
+from utils.verify import (
+    MismatchWindow,
+    fill_largefolio_pattern,
+    hex_dump,
+    verify_full_overlay,
+    verify_stream,
+)
 
 
 DEFAULT_TOKEN = "PyWrtDta"
@@ -51,16 +71,6 @@ APPEND_LAYOUTS = (
     ("baseUnaligned_szAligned", BASE_U, 64 * 1024),
     ("baseUnaligned_szUnaligned", BASE_U, 65535),
 )
-
-
-@dataclass(frozen=True)
-class PatternConfig:
-    mode: str
-    token: bytes
-    seed: int
-    chunk_size: int
-    pattern_gen: str
-    readback: str
 
 
 @dataclass(frozen=True)
@@ -95,58 +105,11 @@ class TargetSpec:
 
 
 @dataclass(frozen=True)
-class MismatchWindow:
-    offset: int
-    expected: bytes
-    actual: bytes
-
-
-@dataclass(frozen=True)
 class MmapBuiltinCase:
     name: str
     file_name: str
     expected_mkwrite: Optional[int]
     pre_drop_caches: bool = False
-
-
-def parse_bytes(size_str: str) -> int:
-    """Parse '123', '4k', '10m', '1g', '512b' into bytes."""
-    s = str(size_str).strip().lower()
-    if not s:
-        raise ValueError("size string cannot be empty")
-
-    unit = s[-1]
-    if unit.isalpha():
-        num_part = s[:-1]
-        factors = {
-            "b": 1,
-            "k": 1024,
-            "m": 1024 * 1024,
-            "g": 1024 * 1024 * 1024,
-        }
-        if unit not in factors:
-            raise ValueError(f"invalid unit '{unit}' in '{s}'")
-        factor = factors[unit]
-    else:
-        num_part = s
-        factor = 1
-
-    if not num_part.isdigit():
-        if len(s) == 1 and s.isalpha():
-            raise ValueError(f"missing number before unit in '{s}'")
-        raise ValueError(f"invalid number part '{num_part}' in '{s}'")
-
-    return int(num_part) * factor
-
-
-def hex_dump(data: bytes, base: int = 0, bytes_per_line: int = 16) -> str:
-    lines = []
-    for i in range(0, len(data), bytes_per_line):
-        chunk = data[i:i + bytes_per_line]
-        hex_part = " ".join(f"{b:02x}" for b in chunk).ljust(bytes_per_line * 3 - 1)
-        ascii_part = "".join(chr(b) if 32 <= b < 127 else "." for b in chunk)
-        lines.append(f"{base + i:08x}  {hex_part}  |{ascii_part}|")
-    return "\n".join(lines)
 
 
 def dump_aligned_blocks(
@@ -198,57 +161,6 @@ def dump_aligned_blocks(
     print("=" * 70 + "\n")
 
 
-def _repeat_bytes(token: bytes, start_idx: int, n: int) -> bytes:
-    if n <= 0:
-        return b""
-    if not token:
-        raise ValueError("pattern token cannot be empty")
-
-    token_len = len(token)
-    start_idx %= token_len
-    out = bytearray(n)
-
-    first = min(n, token_len - start_idx)
-    out[:first] = token[start_idx:start_idx + first]
-    filled = first
-    while filled < n:
-        take = min(token_len, n - filled)
-        out[filled:filled + take] = token[:take]
-        filled += take
-    return bytes(out)
-
-
-def render_pattern_bytes(abs_pos: int, n: int, config: PatternConfig, overlay_off: int = 0) -> bytes:
-    if config.mode == "counter":
-        base = config.seed + abs_pos
-        return bytes(((base + i) & 0xFF) for i in range(n))
-    if config.mode == "filepos":
-        return _repeat_bytes(config.token, abs_pos, n)
-    if config.mode == "repeat":
-        return _repeat_bytes(config.token, abs_pos - overlay_off, n)
-    raise ValueError(f"unknown pattern mode: {config.mode}")
-
-
-def iter_expected_chunks(
-    offset: int,
-    size: int,
-    config: PatternConfig,
-) -> Iterator[Tuple[int, bytes]]:
-    """Yield (relative_pos, expected_chunk) for [offset, offset+size)."""
-    pos = 0
-    while pos < size:
-        chunk = min(config.chunk_size, size - pos)
-        yield pos, render_pattern_bytes(offset + pos, chunk, config)
-        pos += chunk
-
-
-def generate_expected_direct(offset: int, size: int, config: PatternConfig) -> bytes:
-    parts = []
-    for _, chunk in iter_expected_chunks(offset, size, config):
-        parts.append(chunk)
-    return b"".join(parts)
-
-
 def ensure_parent_dir(path: str) -> None:
     parent = os.path.dirname(path) or "."
     os.makedirs(parent, exist_ok=True)
@@ -280,22 +192,6 @@ def truncate_sparse(path: str, size: int) -> None:
         os.ftruncate(fd, size)
     finally:
         os.close(fd)
-
-
-def drop_caches(level: int) -> None:
-    if level not in (1, 2, 3):
-        raise ValueError("drop_caches level must be 1/2/3")
-    os.sync()
-    with open("/proc/sys/vm/drop_caches", "w", encoding="ascii") as f:
-        f.write(str(level))
-
-
-def best_effort_drop_caches(level: int = 3) -> bool:
-    try:
-        drop_caches(level)
-        return True
-    except Exception:
-        return False
 
 
 def open_fd_for_write(path: str) -> int:
@@ -418,105 +314,6 @@ def do_write_region(
             )
 
 
-def verify_stream(
-    fd: int,
-    file_offset: int,
-    size: int,
-    expected_direct: Optional[bytes],
-    expected_iter: Optional[Iterator[Tuple[int, bytes]]],
-    chunk_size: int,
-    read_mode: str,
-    max_mismatch_show: int = 16,
-) -> bool:
-    if size <= 0:
-        print("[verify] size=0, nothing to compare")
-        return True
-
-    def show_mismatch(pos: int, exp: bytes, got: bytes) -> None:
-        print(f"\n[FAIL] mismatch at +{pos} (file_off={file_offset + pos})")
-        show_len = min(256, len(exp), len(got))
-        print("Expected (first up to 256 bytes of this chunk):")
-        print(hex_dump(exp[:show_len]))
-        print("Actual (first up to 256 bytes of this chunk):")
-        print(hex_dump(got[:show_len]))
-
-    if read_mode == "direct":
-        got = os.pread(fd, size, file_offset)
-        if len(got) != size:
-            print(f"[FAIL] readback short: got {len(got)} expected {size}")
-            return False
-        if expected_direct is None:
-            assert expected_iter is not None
-            expected_direct = b"".join(chunk for _, chunk in expected_iter)
-        if got == expected_direct:
-            print("[OK] verify pass (direct compare)")
-            return True
-
-        limit = min(len(got), len(expected_direct))
-        mismatches = 0
-        for i in range(limit):
-            if got[i] != expected_direct[i]:
-                lo = max(0, i - 64)
-                hi = min(limit, i + 64)
-                show_mismatch(i, expected_direct[lo:hi], got[lo:hi])
-                mismatches += 1
-                if mismatches >= max_mismatch_show:
-                    break
-        return False
-
-    if expected_direct is not None:
-        pos = 0
-        while pos < size:
-            n = min(chunk_size, size - pos)
-            got = os.pread(fd, n, file_offset + pos)
-            exp = expected_direct[pos:pos + n]
-            if got != exp:
-                show_mismatch(pos, exp, got)
-                return False
-            pos += n
-        print("[OK] verify pass (stream compare vs direct expected)")
-        return True
-
-    assert expected_iter is not None
-    for rel_pos, exp in expected_iter:
-        got = os.pread(fd, len(exp), file_offset + rel_pos)
-        if got != exp:
-            show_mismatch(rel_pos, exp, got)
-            return False
-    print("[OK] verify pass (stream compare)")
-    return True
-
-
-def read_region_discard(path: str, offset: int, size: int, chunk_size: int, passes: int = 1) -> int:
-    if size <= 0 or passes <= 0:
-        return 0
-
-    fd = None
-    try:
-        fd = open_fd_for_read(path)
-        return read_fd_discard(fd, offset, size, chunk_size, passes=passes)
-    finally:
-        if fd is not None:
-            os.close(fd)
-
-
-def read_fd_discard(fd: int, offset: int, size: int, chunk_size: int, passes: int = 1) -> int:
-    if size <= 0 or passes <= 0:
-        return 0
-
-    total = 0
-    for _ in range(passes):
-        pos = 0
-        while pos < size:
-            chunk = min(chunk_size, size - pos)
-            data = os.pread(fd, chunk, offset + pos)
-            if not data:
-                break
-            total += len(data)
-            pos += len(data)
-    return total
-
-
 def round_down(x: int, align: int) -> int:
     return x & ~(align - 1)
 
@@ -592,192 +389,6 @@ def cold_read_file_bytes(path: str, *, drop_first: bool) -> bytes:
     if drop_first:
         drop_caches(3)
     return read_file_bytes(path)
-
-
-def posix_fallocate_or_truncate(fd: int, size: int) -> None:
-    try:
-        os.posix_fallocate(fd, 0, size)
-    except AttributeError:
-        os.ftruncate(fd, size)
-    except OSError:
-        os.ftruncate(fd, size)
-
-
-
-
-def fill_largefolio_pattern(fd: int, size: int, span: int) -> None:
-    posix_fallocate_or_truncate(fd, size)
-    chunk = bytes((i ^ 0x5A) & 0xFF for i in range(TARGET_LARGE))
-
-    def iter_fill_chunks() -> Iterator[Tuple[int, bytes]]:
-        off = 0
-        while off < span:
-            take = min(len(chunk), span - off)
-            yield off, chunk[:take]
-            off += take
-
-    written = pwrite_all(fd, 0, iter_fill_chunks())
-    if written != span:
-        raise OSError(errno.EIO, f"pwrite short: wrote {written} expected {span}")
-    os.fsync(fd)
-
-
-def build_expected_full_chunk(
-    start: int,
-    length: int,
-    baseline_kind: str,
-    baseline_len: int,
-    overlay_off: int,
-    overlay_len: int,
-    config: PatternConfig,
-) -> bytes:
-    exp = bytearray(length)
-
-    if baseline_kind == "existing_a":
-        baseline_end = min(start + length, baseline_len)
-        if baseline_end > start:
-            fill_len = baseline_end - start
-            exp[:fill_len] = b"A" * fill_len
-    elif baseline_kind != "hole":
-        raise ValueError(f"unknown baseline kind: {baseline_kind}")
-
-    overlay_end = overlay_off + overlay_len
-    seg_start = max(start, overlay_off)
-    seg_end = min(start + length, overlay_end)
-    if seg_start < seg_end:
-        rel = seg_start - start
-        seg_len = seg_end - seg_start
-        exp[rel:rel + seg_len] = render_pattern_bytes(seg_start, seg_len, config, overlay_off=overlay_off)
-
-    return bytes(exp)
-
-
-def first_mismatch_window(
-    fd: int,
-    expected_len: int,
-    chunk_start: int,
-    expected: bytes,
-    actual: bytes,
-    baseline_kind: str,
-    baseline_len: int,
-    overlay_off: int,
-    overlay_len: int,
-    config: PatternConfig,
-) -> MismatchWindow:
-    for idx in range(min(len(expected), len(actual))):
-        if expected[idx] != actual[idx]:
-            mismatch_off = chunk_start + idx
-            lo = max(0, mismatch_off - 64)
-            hi = min(expected_len, mismatch_off + 64)
-            got = os.pread(fd, hi - lo, lo)
-            exp = build_expected_full_chunk(
-                lo,
-                hi - lo,
-                baseline_kind,
-                baseline_len,
-                overlay_off,
-                overlay_len,
-                config,
-            )
-            return MismatchWindow(offset=lo, expected=exp, actual=got)
-
-    mismatch_off = chunk_start
-    lo = max(0, mismatch_off - 64)
-    hi = min(expected_len, mismatch_off + 64)
-    got = os.pread(fd, hi - lo, lo)
-    exp = build_expected_full_chunk(
-        lo,
-        hi - lo,
-        baseline_kind,
-        baseline_len,
-        overlay_off,
-        overlay_len,
-        config,
-    )
-    return MismatchWindow(offset=lo, expected=exp, actual=got)
-
-
-def verify_full_overlay(
-    path: str,
-    baseline_kind: str,
-    baseline_len: int,
-    overlay_off: int,
-    overlay_len: int,
-    expected_len: int,
-    config: PatternConfig,
-    *,
-    cold_read: bool,
-) -> bool:
-    if cold_read:
-        print("[verify] full-file disk-mode: os.sync + drop_caches(3) + reopen")
-        try:
-            t0 = time.perf_counter()
-            drop_caches(3)
-            t1 = time.perf_counter()
-            print(f"[verify] drop_caches done in {t1 - t0:.3f}s")
-        except PermissionError:
-            print("[FAIL] drop_caches requires root (permission denied).")
-            return False
-        except Exception as exc:
-            print(f"[FAIL] drop_caches error: {exc}")
-            return False
-
-    try:
-        st = os.stat(path)
-    except FileNotFoundError:
-        print(f"[FAIL] file not found: {path}")
-        return False
-
-    if st.st_size != expected_len:
-        print(f"[FAIL] size mismatch: actual={st.st_size} expected={expected_len}")
-        return False
-
-    fd = None
-    try:
-        fd = open_fd_for_read(path)
-        pos = 0
-        while pos < expected_len:
-            n = min(config.chunk_size, expected_len - pos)
-            got = os.pread(fd, n, pos)
-            if len(got) != n:
-                print(f"[FAIL] short read at {pos}: got {len(got)} expect {n}")
-                return False
-
-            exp = build_expected_full_chunk(
-                pos,
-                n,
-                baseline_kind,
-                baseline_len,
-                overlay_off,
-                overlay_len,
-                config,
-            )
-            if got != exp:
-                window = first_mismatch_window(
-                    fd,
-                    expected_len,
-                    pos,
-                    exp,
-                    got,
-                    baseline_kind,
-                    baseline_len,
-                    overlay_off,
-                    overlay_len,
-                    config,
-                )
-                print(f"[FAIL] full-file mismatch around offset {window.offset}")
-                print("Expected slice:")
-                print(hex_dump(window.expected, base=window.offset))
-                print("Actual slice:")
-                print(hex_dump(window.actual, base=window.offset))
-                return False
-            pos += n
-
-        print("[OK] full-file verify pass")
-        return True
-    finally:
-        if fd is not None:
-            os.close(fd)
 
 
 def prepare_baseline(
