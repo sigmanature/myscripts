@@ -10,9 +10,8 @@ fi
 
 export KEY="${KEY:-/opt/test-secrets/fscrypt-ci.key}"
 SCRIPT="${SCRIPT:-$SCRIPT_DIR/rw_test.py}"
-PLAIN_DIR="${PLAIN_DIR:-/mnt/f2fs}"
-export ENC_DIR="${ENC_DIR:-/mnt/f2fs/enc_test}"
 MNT_F2FS="${MNT_F2FS:-/mnt/f2fs}"
+export ENC_DIR="${ENC_DIR:-$MNT_F2FS/enc_test}"
 
 PATTERN_MODE="${PATTERN_MODE:-filepos}"
 PATTERN_TOKEN="${PATTERN_TOKEN:-PyWrtDta}"
@@ -28,8 +27,8 @@ DROP_AFTER_PREPARE="${DROP_AFTER_PREPARE:-1}"
 
 need_cmd() { command -v "$1" >/dev/null 2>&1 || { echo "[FATAL] missing cmd: $1"; exit 2; }; }
 need_cmd python3
-need_cmd findmnt
 need_cmd fscrypt
+need_cmd findmnt
 need_cmd lsattr
 
 if [[ ! -f "$SCRIPT" ]]; then
@@ -37,11 +36,8 @@ if [[ ! -f "$SCRIPT" ]]; then
   exit 2
 fi
 
-mkdir -p "$PLAIN_DIR"
-
 if [[ ! -d "$ENC_DIR" ]]; then
   echo "[FATAL] ENC_DIR not found: $ENC_DIR"
-  echo "        Please create it and make sure it is an fscrypt-encrypted directory."
   exit 2
 fi
 
@@ -81,8 +77,7 @@ ensure_enc_dir_ready
 
 cmd=(
   python3 "$SCRIPT" matrix
-  --target "plain=$PLAIN_DIR"
-  --target "enc=$ENC_DIR"
+  --target "inline=$ENC_DIR"
   --pattern-mode "$PATTERN_MODE"
   --token "$PATTERN_TOKEN"
   --seed "$SEED"
@@ -103,7 +98,6 @@ if [[ "$DROP_AFTER_PREPARE" == "0" ]]; then
 fi
 
 echo "[INFO] SCRIPT=$SCRIPT"
-echo "[INFO] PLAIN_DIR=$PLAIN_DIR"
 echo "[INFO] ENC_DIR=$ENC_DIR"
 echo "[INFO] VERIFY_MODE=$VERIFY_MODE LOOPS=$LOOPS"
 echo "[INFO] PATTERN_MODE=$PATTERN_MODE TOKEN=$PATTERN_TOKEN CHUNK=$CHUNK"
