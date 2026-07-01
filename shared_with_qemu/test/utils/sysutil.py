@@ -18,3 +18,12 @@ def drop_caches(level: int) -> None:
     with open("/proc/sys/vm/drop_caches", "w", encoding="ascii") as f:
         f.write(str(level))
     print("[drop_caches] OK", flush=True)
+
+
+def best_effort_drop_caches(level: int) -> bool:
+    try:
+        drop_caches(level)
+        return True
+    except Exception as exc:
+        print(f"[drop_caches] SKIP/FAIL: {exc}", flush=True)
+        return False

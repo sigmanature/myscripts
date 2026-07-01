@@ -53,7 +53,7 @@ class GcPulseThread(threading.Thread):
         self.interval_s = interval_s
         self.gc_window_s = max(1, int(gc_window_s))
         self.verbose = verbose
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
         self.pulses = 0
         self.success = 0
         self.f2fs_io_path = _resolve_f2fs_io()
@@ -74,20 +74,20 @@ class GcPulseThread(threading.Thread):
         return bool(self.f2fs_io_path and self.dev_name)
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_event.set()
 
     def run(self) -> None:
         if not self.ready():
             if self.verbose:
                 print(f"[gc] {self.backend_desc}; GC pulse thread idle", flush=True)
-            while not self._stop.is_set():
+            while not self._stop_event.is_set():
                 time.sleep(1.0)
             return
 
         if self.verbose:
             print(f"[gc] backend={self.backend_desc}", flush=True)
 
-        while not self._stop.is_set():
+        while not self._stop_event.is_set():
             self.pulses += 1
             if trigger_urgent_gc(self.f2fs_io_path, self.dev_name, self.gc_window_s):
                 self.success += 1

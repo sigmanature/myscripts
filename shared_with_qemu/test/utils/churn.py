@@ -30,14 +30,15 @@ class ChurnThread(threading.Thread):
         self.interval_s = interval_s
         self.seed = seed
         self.verbose = verbose
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
         self._live = []
         self.rounds = 0
         self.created = 0
         self.deleted = 0
+        self.errors = 0
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_event.set()
 
     def _mk_one(self, idx: int) -> str:
         name = f"{'inl' if self.inline_mode else 'reg'}_{os.getpid()}_{threading.get_ident()}_{self.rounds}_{idx}.bin"
@@ -50,20 +51,28 @@ class ChurnThread(threading.Thread):
         if self.verbose:
             print(f"[churn] dir={self.churn_dir} inline={self.inline_mode} size={self.file_size}B", flush=True)
 
-        while not self._stop.is_set():
+        while not self._stop_event.is_set():
             self.rounds += 1
             batch = []
             for i in range(self.files_per_round):
                 path = self._mk_one(i)
-                fd = open_rw(path, create=True)
+                fd = -1
                 try:
+                    fd = open_rw(path, create=True)
                     ensure_file_size(fd, self.file_size)
                     pwrite_pattern(fd, 0, self.file_size, seed=rnd.randint(1, 1_000_000))
                     fsync(fd)
+                    batch.append(path)
+                    self.created += 1
+                except OSError:
+                    self.errors += 1
+                    try:
+                        os.unlink(path)
+                    except FileNotFoundError:
+                        pass
                 finally:
-                    os.close(fd)
-                batch.append(path)
-                self.created += 1
+                    if fd >= 0:
+                        os.close(fd)
 
             rnd.shuffle(batch)
             keep_n = int(len(batch) * self.keep_fraction)

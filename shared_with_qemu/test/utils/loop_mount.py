@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
@@ -70,11 +71,44 @@ class LoopMount:
             print(f"[loop] mount_opts={self.mount_opts}", flush=True)
             print(f"[loop] mounted at {self.mountpoint}", flush=True)
 
-    def cleanup(self, verbose: bool = False) -> None:
+    def unmount(self, verbose: bool = False, retries: int = 10, delay_s: float = 0.5) -> bool:
+        last_stderr = ""
+        for _ in range(retries):
+            if not _is_mounted(self.mountpoint):
+                return True
+            _run(["sync"], check=False)
+            cp = _run(["umount", self.mountpoint], check=False, capture=True)
+            if cp.returncode == 0:
+                return True
+            last_stderr = (cp.stderr or cp.stdout or "").strip()
+            time.sleep(delay_s)
+
+        if verbose and last_stderr:
+            print(f"[loop] umount failed: {last_stderr}", flush=True)
+        return not _is_mounted(self.mountpoint)
+
+    def mount_existing(self, verbose: bool = False) -> None:
+        if os.geteuid() != 0:
+            raise RuntimeError("need root for mount")
+        if not self.loopdev:
+            raise RuntimeError("loopdev missing; call setup() first")
+        if _is_mounted(self.mountpoint):
+            raise RuntimeError(f"mountpoint already mounted: {self.mountpoint}")
+        _ensure_dir(self.mountpoint)
+        _run(
+            ["mount", "-t", "f2fs", "-o", self.mount_opts, self.loopdev, self.mountpoint],
+            check=True,
+        )
+        if verbose:
+            print(f"[loop] remounted {self.loopdev} at {self.mountpoint}", flush=True)
+
+    def cleanup(self, verbose: bool = False, remove_image: bool = True) -> None:
         # best effort cleanup
         try:
+            if not self.unmount(verbose=verbose, retries=5, delay_s=0.5):
+                _run(["umount", "-l", self.mountpoint], check=False)
             if _is_mounted(self.mountpoint):
-                _run(["umount", self.mountpoint], check=False)
+                _run(["umount", "-l", self.mountpoint], check=False)
         except Exception:
             pass
 
@@ -84,11 +118,14 @@ class LoopMount:
         except Exception:
             pass
 
-        try:
-            if os.path.exists(self.image_path):
-                os.unlink(self.image_path)
-        except Exception:
-            pass
+        if remove_image:
+            try:
+                if os.path.exists(self.image_path):
+                    os.unlink(self.image_path)
+            except Exception:
+                pass
+        elif verbose:
+            print(f"[loop] preserved image={self.image_path}", flush=True)
 
         try:
             # keep mountpoint dir (in case you want logs), but you can uncomment to remove:

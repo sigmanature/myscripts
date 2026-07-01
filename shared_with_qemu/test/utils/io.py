@@ -1,8 +1,28 @@
+import fcntl
 import os
 import time
 
 from .patterns import PatternConfig, iter_expected_chunks
+from .sysutil import drop_caches
 
+# F2FS atomic write ioctls (from include/uapi/linux/f2fs.h)
+_F2FS_IOCTL_MAGIC = 0xf5
+F2FS_IOC_START_ATOMIC_WRITE  = ((_F2FS_IOCTL_MAGIC << 8) | 1)
+F2FS_IOC_COMMIT_ATOMIC_WRITE = ((_F2FS_IOCTL_MAGIC << 8) | 2)
+F2FS_IOC_ABORT_ATOMIC_WRITE  = ((_F2FS_IOCTL_MAGIC << 8) | 5)
+F2FS_IOC_START_ATOMIC_REPLACE = ((_F2FS_IOCTL_MAGIC << 8) | 25)
+
+
+def atomic_start(fd: int) -> None:
+    fcntl.ioctl(fd, F2FS_IOC_START_ATOMIC_WRITE)
+
+
+def atomic_commit(fd: int) -> None:
+    fcntl.ioctl(fd, F2FS_IOC_COMMIT_ATOMIC_WRITE)
+
+
+def atomic_abort(fd: int) -> None:
+    fcntl.ioctl(fd, F2FS_IOC_ABORT_ATOMIC_WRITE)
 def ensure_dir(p: str) -> None:
     os.makedirs(p, exist_ok=True)
 
@@ -89,3 +109,30 @@ def pwrite_pattern_config(fd: int, offset: int, size: int, config: PatternConfig
             raise OSError(f"short pwrite: wrote {wrote} expected {len(chunk)}")
         total += wrote
     return total
+
+
+def create_and_fill_file(path: str, size: int, config: PatternConfig) -> None:
+    """Create a file of `size` bytes filled with `config` pattern, ensuring
+    f2fs_inode_may_use_large_folio() returns true so large-folio write paths
+    are exercised.
+
+    Protocol:
+      1. open(O_CREAT|O_WRONLY|O_TRUNC) + ftruncate(size) + close
+         → creates file, triggers inline→block conversion, clears FI_INLINE_DATA.
+      2. drop_caches(3) — evicts inode from cache so next open must walk f2fs_iget.
+      3. open(O_RDWR) + pwrite + fsync + close
+         → f2fs_iget re-evaluates inode_may_use_large_folio (now true),
+           mapping_set_folio_min_order is set, writes land on large folios.
+    """
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_CLOEXEC, 0o644)
+    try:
+        os.ftruncate(fd, size)
+    finally:
+        os.close(fd)
+    drop_caches(3)
+    fd = os.open(path, os.O_RDWR | os.O_CLOEXEC)
+    try:
+        pwrite_pattern_config(fd, 0, size, config)
+        os.fsync(fd)
+    finally:
+        os.close(fd)

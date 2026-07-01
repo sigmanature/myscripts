@@ -62,13 +62,18 @@ def _repeat_bytes(token: bytes, start_idx: int, n: int) -> bytes:
     return bytes(out)
 
 
+def _mod251_bytes(base: int, n: int) -> bytes:
+    cycle = bytes(range(251))
+    return _repeat_bytes(cycle, base % 251, n)
+
+
 def render_pattern_bytes(abs_pos: int, n: int, config: PatternConfig, overlay_off: int = 0) -> bytes:
     if config.mode == "counter":
         base = config.seed + abs_pos
         return bytes(((base + i) & 0xFF) for i in range(n))
     if config.mode == "mod251":
         base = config.seed + abs_pos
-        return bytes(((base + i) % 251) for i in range(n))
+        return _mod251_bytes(base, n)
     if config.mode == "filepos":
         return _repeat_bytes(config.token, abs_pos, n)
     if config.mode == "repeat":
