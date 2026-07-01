@@ -61,7 +61,7 @@ echo "Append Extra     : ${APPEND_EXTRA}"
 echo "==========================================="
 
 # --- 4) 保留你原来的 kernel cmdline（不改你的 console=ttyAMA0 语义）---
-KERNEL_APPEND='panic=5 noinitrd root=/dev/vda rw console=ttyAMA0 nokaslr loglevel=8 ramoops.mem_address=0x1FF800000 ramoops.mem_size=0x200000 ramoops.record_size=0x20000 ramoops.console_size=0x20000 panic_on_oops=1 sysrq_always_enabled'
+KERNEL_APPEND='panic=5 noinitrd root=/dev/vda rw console=ttyAMA0 nokaslr loglevel=8 ramoops.mem_address=0x1FF800000 ramoops.mem_size=0x200000 ramoops.record_size=0x20000 ramoops.console_size=0x20000 panic_on_warn=0 panic_on_oops=0 sysrq_always_enabled systemd.unit=multi-user.target systemd.mask=mnt-f2fs.mount fsck.mode=skip'
 if [[ -n "${APPEND_EXTRA}" ]]; then
   KERNEL_APPEND="${KERNEL_APPEND} ${APPEND_EXTRA}"
 fi

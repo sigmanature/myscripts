@@ -251,7 +251,7 @@ ensure_instance_seeded() {
 
 build_qemu_command() {
   local kernel_append
-  kernel_append='panic=5 noinitrd root=/dev/vda rw console=ttyAMA0 nokaslr loglevel=8 ramoops.mem_address=0x1FF800000 ramoops.mem_size=0x200000 ramoops.record_size=0x20000 ramoops.console_size=0x20000 panic_on_oops=1 sysrq_always_enabled'
+  kernel_append='panic=5 noinitrd root=/dev/vda rw console=ttyAMA0 nokaslr loglevel=8 ramoops.mem_address=0x1FF800000 ramoops.mem_size=0x200000 ramoops.record_size=0x20000 ramoops.console_size=0x20000 panic_on_warn=0 panic_on_oops=0 sysrq_always_enabled'
 
   QEMU_CMD=(
     qemu-system-aarch64

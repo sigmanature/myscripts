@@ -29,6 +29,7 @@ struct config {
 	int writer_max_iters;
 	int reader_rounds;
 	int reader_pause_us;
+	const char *wait_file;
 	bool drop_caches;
 	bool pin_cpus;
 };
@@ -202,9 +203,15 @@ static void usage(const char *prog)
 	fprintf(stderr,
 		"usage: %s <path> [--file-mb N] [--readers N] [--writer-delay-ms N]\n"
 		"          [--writer-iters N] [--reader-rounds N] [--reader-pause-us N]\n"
-		"          [--drop-caches] [--pin-cpus]\n",
+		"          [--wait-file PATH] [--drop-caches] [--pin-cpus]\n",
 		prog);
 	exit(2);
+}
+
+static void wait_for_file(const char *path)
+{
+	while (access(path, F_OK))
+		usleep(10000);
 }
 
 int main(int argc, char **argv)
@@ -245,6 +252,8 @@ int main(int argc, char **argv)
 			ctx.cfg.reader_rounds = (int)parse_long(argv[++i], "reader-rounds");
 		} else if (!strcmp(argv[i], "--reader-pause-us") && i + 1 < argc) {
 			ctx.cfg.reader_pause_us = (int)parse_long(argv[++i], "reader-pause-us");
+		} else if (!strcmp(argv[i], "--wait-file") && i + 1 < argc) {
+			ctx.cfg.wait_file = argv[++i];
 		} else if (!strcmp(argv[i], "--drop-caches")) {
 			ctx.cfg.drop_caches = true;
 		} else if (!strcmp(argv[i], "--pin-cpus")) {
@@ -269,6 +278,9 @@ int main(int argc, char **argv)
 	if (ctx.map == MAP_FAILED)
 		die_errno("mmap");
 	ctx.nr_pages = ctx.cfg.file_size / PAGE_SIZE;
+
+	if (ctx.cfg.wait_file)
+		wait_for_file(ctx.cfg.wait_file);
 
 	if (pthread_barrier_init(&ctx.start_barrier, NULL,
 				 (unsigned int)ctx.cfg.readers + 1))

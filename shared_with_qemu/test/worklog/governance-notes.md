@@ -82,3 +82,43 @@
 - Promoted to reference: `references/gc-long-run-targets.md`.
 - Promoted to skill update: `skills/rw-test-harness/SKILL.md` and `skills/rw-test-harness/references/framework-map.md`.
 - Discarded: trying to reuse `rw_matrix_inline.sh` for this scenario, because it would silently test the wrong abstraction.
+
+## 2026-04-30 inline artifact verity gating
+
+- Governing target: existing skill + provider regression test.
+- Expected reuse likelihood: likely.
+- Initial landing zone:
+  - `case/test_artifact_pressure_verity_fsync_plan.py`
+  - `/home/nzzhao/.agents/skills/rw-test-harness/SKILL.md`
+
+### Workflow Candidate
+
+- owning skill: `rw-test-harness`
+- phase: buffered-I/O long-run inlinecrypt/fs-verity pressure
+- trigger / symptom: filenames already carry `.V`, but runner logs stay `verity=0` for long periods and no `enable_fsverity()` activity appears
+- action: separate stable candidate selection from runtime enablement; after each concurrent fsync batch, evaluate every batched path for verity eligibility instead of only the current focus path
+- verify: targeted regression case `python3 case/test_artifact_pressure_verity_fsync_plan.py`
+- fallback: if real f2fs validation is unavailable, keep static/provider validation and defer guest validation explicitly
+- workflow effect: do not infer active fs-verity from `.V` filename tags alone; batch-wide post-fsync enablement is required
+- promote to: `rw-test-harness` skill workflow note
+- status: promoted
+
+## 2026-04-30 mmap SIGBUS on inline artifact pressure
+
+- Governing target: existing skill + diagnostic workflow note.
+- Expected reuse likelihood: likely.
+- Initial landing zone:
+  - `/home/nzzhao/.agents/skills/rw-test-harness/SKILL.md`
+  - failure evidence under `/tmp/inline_verity_pressure_qga/run_20260430-112858_i1/failures/group_000030.app_0063.artifact_01.write_signal`
+
+### Workflow Candidate
+
+- owning skill: `rw-test-harness`
+- phase: mmap / inlinecrypt long-run pressure triage
+- trigger / symptom: userspace tmp writer dies with `SIGBUS` during `mmap_body`, saved sample shows a clean nonzero prefix followed by zero pages
+- action: inspect the failing inode's `page_mkwrite_state`, `reserve_block`, and `get_block_locked` logs before blaming writeback; large-folio faults can reserve multiple subpages as `NEW_ADDR` and then fail later subpage allocation with `err=-28`, producing `SIGBUS` and a sparse zero tail
+- verify: correlate saved sample's first zero page with the logged failing `pidx` / `folio_index`
+- fallback: if the original inode is gone, use the saved failure copy plus `process_meta.json` inode and size fields
+- workflow effect: distinguish mmap-fault `SIGBUS` from post-writeback corruption; do not assume writeback error or EOF mapping first
+- promote to: `rw-test-harness` skill mmap guidance
+- status: promoted

@@ -143,6 +143,32 @@ ENABLE_GC_PULSE = True
 
 ---
 
+## 11. 创建测试文件（硬性，禁止违反）
+
+**绝对禁止** 用 `open(O_CREAT)` 直接创建后立刻 `pwrite`。
+
+原因：F2FS 新建 inode 时会设置 `FI_INLINE_DATA`，`f2fs_inode_may_use_large_folio()` 返回 false，
+导致 `mapping_set_folio_min_order` 不被调用，large-folio write 路径完全失效，测试等于白跑。
+
+**必须使用 `utils/io.py` 中的 `create_and_fill_file(path, size, config)`**，该函数强制执行以下三步协议：
+
+1. `open(O_CREAT|O_WRONLY|O_TRUNC)` + `ftruncate(size)` + `close` → 清除 `FI_INLINE_DATA`
+2. `drop_caches(3)` → 将 inode 从 inode cache 驱逐；**不能省略**：dentry cache 命中会绕过 `f2fs_iget`，导致 `mapping_set_folio_min_order` 不被调用
+3. 重新 `open(O_RDWR)` → cache miss 强制走 `f2fs_iget`，`inode_may_use_large_folio()` 返回 true，large folio 生效，然后 `pwrite` + `fsync`
+
+三步缺一不可，不能合并为一个 fd，不能省略 drop_caches。
+
+```python
+# 正确
+create_and_fill_file(FILE_PATH, FILE_SIZE, BASELINE)
+
+# 错误 — 禁止
+fd = open_rw(FILE_PATH, create=True)
+pwrite_pattern_config(fd, 0, FILE_SIZE, BASELINE)  # inode 仍是 inline，large folio 不生效
+```
+
+---
+
 ## PR 门禁（强制执行）
 
 - [ ] 新增/修改的 case 是否在 `case/` 且文件名含 `test`？
